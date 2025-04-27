@@ -2,11 +2,21 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    host: '0.0.0.0',
-    port: 5173,
-    strictPort: true,
-  }
-})
+export default defineConfig(
+    ({ command }) => {
+      if ( command === 'build' ) {
+        return ({
+          plugins: [react()],
+          base: '/spa-pass'
+        })
+      }
+      return ({
+        plugins: [react()],
+        server: {
+          host: '0.0.0.0',
+          port: 5173,
+          strictPort: true,
+        }
+      })
+    }
+)
