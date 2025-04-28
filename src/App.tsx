@@ -1,14 +1,75 @@
 import { useState, useEffect } from 'react';
-import { browserSupportsWebAuthn, startRegistration, startAuthentication } from '@simplewebauthn/browser';
-import viteLogo from '/vite.svg';
-import reactLogo from './assets/react.svg';
+import { browserSupportsWebAuthn } from '@simplewebauthn/browser';
 import './App.css';
+import {
+    ApolloClient,
+    createHttpLink,
+    InMemoryCache,
+    useMutation,
+    useQuery,
+    gql,
+} from "@apollo/client";
+
+const httpLink = createHttpLink({
+    uri: 'https://api-gateway.cvlb.tech/gql/v1/ecom',
+    headers: { 'X-Api-Key': 'TOOYB1KQ6-FAUW-IH4W-LIEF1T4AE6E' },
+    credentials: 'include',
+});
+const client = new ApolloClient({
+    link: httpLink,
+    cache: new InMemoryCache(),
+});
+
+const useProfile = () => {
+    const GET_PROFILE = gql`
+        query {
+            profile { email }
+        }
+    `;
+
+
+    const { data, refetch } = useQuery(GET_PROFILE, { client });
+
+    const email = data?.profile?.email || '';
+
+    return {
+        email,
+        hasEmail: !!email && email.includes("@"),
+        getEmail: refetch,
+    };
+};
+
+const useCode = () => {
+    const GET_CODE = gql`
+        mutation getCode($email: String!) {
+            sendEmailVerification(email: $email)
+        }
+    `;
+    const [getCode] = useMutation(GET_CODE, { client });
+    return { getCode };
+};
+
+const useLogin = () => {
+    const LOGIN = gql`
+        mutation login($email: String!, $code: String!) {
+            accessKeySignIn(email: $email, code: $code)
+        }
+    `;
+    const [toLogin] = useMutation(LOGIN, { client });
+    return {
+        toLogin,
+    };
+};
 
 function App() {
-    const [count, setCount] = useState(0);
-    const [message, setMessage] = useState('');
-    const [error, setError] = useState('');
-    const [debugLog, setDebugLog] = useState('');
+    const [inputEmail, setInputEmail] = useState('');
+    const [inputCode, setInputCode]   = useState('');
+    const [message, setMessage]       = useState('');
+    const [error, setError]           = useState('');
+    const { getEmail, hasEmail, email }         = useProfile();
+    const [step, setStep] = useState<'email' | 'code'>('email');
+    const { getCode }                 = useCode();
+    const { toLogin }          = useLogin();
 
     useEffect(() => {
         if (!browserSupportsWebAuthn()) {
@@ -16,128 +77,125 @@ function App() {
         }
     }, []);
 
-    const printDebug = (title: string, output: any) => {
-        setDebugLog(prev => `${prev}\n// ${title}\n${JSON.stringify(output, null, 2)}\n`);
-    };
-
-    const handleRegister = async () => {
-        setMessage('');
+    const handleSendCode = async () => {
         setError('');
-        setDebugLog('');
-
+        setMessage('');
         try {
-            const resp = await fetch('https://api-gateway.cvlb.tech/lambda/v1/manage-passkey?action=register', {
-                headers: {
-                    'X-Api-Key': 'TOOYB1KQ6-FAUW-IH4W-LIEF1T4AE6E',
-                    'X-Ocelot-Auth': 'test@test.com'
-                }
-            });
-            const response = await resp.json();
-            const opts = response.data;
-            printDebug('Registration Options', opts);
-
-            const attResp = await startRegistration({ optionsJSON: opts });
-            printDebug('Registration Response', attResp);
-
-            const verificationResp = await fetch('https://api-gateway.cvlb.tech/lambda/v1/manage-passkey?action=verification', {
-                method: 'POST',
-                headers: {
-                    'X-Api-Key': 'TOOYB1KQ6-FAUW-IH4W-LIEF1T4AE6E',
-                    'X-Ocelot-Auth': 'test@test.com',
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(attResp),
-            });
-
-            const responseVerificationJSON = await verificationResp.json();
-            const verificationJSON = responseVerificationJSON.data;
-            printDebug('Server Response', verificationJSON);
-
-            if (verificationJSON?.verified) {
-                setMessage('Authenticator registrado com sucesso!');
+            await getCode({ variables: { email: inputEmail } });
+            setMessage(`Código enviado para ${inputEmail}`);
+            setStep('code');
+        } catch (err: unknown) {
+            if (err instanceof Error) {
+                setError(err.message || 'Erro ao confirmar código');
             } else {
-                setError(`Erro na verificação: ${JSON.stringify(verificationJSON)}`);
+                setError('Erro desconhecido');
             }
-        } catch (error: any) {
-            setError(`Erro: ${error.message || error}`);
         }
     };
 
-    const handleAuthenticate = async () => {
-        setMessage('');
-        setError('');
-        setDebugLog('');
-
+    const handleConfirmCode = async () => {
+        setError(''); setMessage('');
         try {
-            const resp = await fetch('https://api-gateway.cvlb.tech/lambda/v1/manage-passkey?action=register', {
-                headers: {
-                    'X-Api-Key': 'TOOYB1KQ6-FAUW-IH4W-LIEF1T4AE6E',
-                    'X-Ocelot-Auth': 'test@test.com'
-                }
-            });
-            const response = await resp.json();
-            const opts = response.data;
-            printDebug('Authentication Options', opts);
-
-            const asseResp = await startAuthentication({ optionsJSON: opts });
-            printDebug('Authentication Response', asseResp);
-
-            const verificationResp = await fetch('/verify-authentication', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(asseResp),
-            });
-
-            const verificationJSON = await verificationResp.json();
-            printDebug('Server Response', verificationJSON);
-
-            if (verificationJSON?.verified) {
-                setMessage('Usuário autenticado com sucesso!');
+            await toLogin({ variables: { email: inputEmail, code: inputCode } });
+            await getEmail();
+        } catch (err: unknown) {
+            if (err instanceof Error) {
+                setError(err.message || 'Erro ao confirmar código');
             } else {
-                setError(`Erro na autenticação: ${JSON.stringify(verificationJSON)}`);
+                setError('Erro desconhecido');
             }
-        } catch (error: any) {
-            setError(`Erro: ${error.message || error}`);
         }
     };
 
     return (
-        <>
-            <div>
-                <a href="https://vite.dev" target="_blank">
-                    <img src={viteLogo} className="logo" alt="Vite logo" />
-                </a>
-                <a href="https://react.dev" target="_blank">
-                    <img src={reactLogo} className="logo react" alt="React logo" />
-                </a>
+        <div className="container mx-auto p-4">
+            <h1 className="text-2xl font-bold text-center mb-8">React (Passkey)</h1>
+            <div className="shadow rounded-lg p-6 mb-8">
+                {/* --- Formulário de acordo com o step --- */}
+                {step === 'email' && (
+                    <div className="mb-6">
+                        <label htmlFor="email" className="block mb-1">
+                            Digite seu e-mail
+                        </label>
+                        <input
+                            id="email"
+                            type="email"
+                            value={inputEmail}
+                            onChange={e => setInputEmail(e.target.value)}
+                            className="border rounded-md p-2 w-full max-w-xs"
+                        />
+                    </div>
+                )}
+
+                {step === 'code' && (
+                    <div className="mb-6">
+                        <label htmlFor="code" className="block mb-1">
+                            Digite o código recebido
+                        </label>
+                        <input
+                            id="code"
+                            type="text"
+                            value={inputCode}
+                            onChange={e => setInputCode(e.target.value)}
+                            className="border rounded-md p-2 w-full max-w-xs"
+                        />
+                    </div>
+                )}
+
+                {/* --- Barra de ações: Voltar | Ação (Enviar/Confirmar) | Avançar --- */}
+                <div className="flex justify-center space-x-4 mt-4">
+                    {/* Voltar */}
+                    <button
+                        onClick={() => setStep('email')}
+                        disabled={step === 'email'}
+                        className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                    >
+                        Voltar
+                    </button>
+
+                    {/* Botão de ação: envia código ou confirma login */}
+                    <button
+                        onClick={step === 'email' ? handleSendCode : handleConfirmCode}
+                        disabled={
+                            (step === 'email' && !inputEmail.includes('@')) ||
+                            (step === 'code' && !inputCode)
+                        }
+                        className={`px-4 py-2 rounded text-white ${
+                            step === 'email'
+                                ? 'bg-blue-600 hover:bg-blue-700'
+                                : 'bg-green-600 hover:bg-green-700'
+                        } disabled:bg-gray-400`}
+                    >
+                        {step === 'email' ? 'Enviar Código' : 'Confirmar Código'}
+                    </button>
+
+                    {/* Avançar */}
+                    <button
+                        onClick={() => setStep('code')}
+                        disabled={step === 'code'}
+                        className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+                    >
+                        Avançar
+                    </button>
+                </div>
+
+                {/* --- Mensagens de estado --- */}
+                {hasEmail && (
+                    <p className="text-green-600 font-medium mt-4">
+                        ✅ Olá, {email}!
+                    </p>
+                )}
+                {message && <p className="text-green-600 mt-2">{message}</p>}
+                {error   && <p className="text-red-600 mt-2">{error}</p>}
             </div>
-            <h1>Vite + React (Passkey)</h1>
 
-            <div className="card">
-                <button onClick={() => setCount((count) => count + 1)}>
-                    count is {count}
-                </button>
-                <p>Edit <code>src/App.tsx</code> and save to test HMR</p>
-            </div>
-
-            <div className="card">
-                <button onClick={handleRegister}>🚪 Registrar Passkey</button>
-                <button onClick={handleAuthenticate}>🔐 Autenticar com Passkey</button>
-
-                {message && <p style={{ color: 'green' }}>{message}</p>}
-                {error && <p style={{ color: 'red' }}>{error}</p>}
-
-                <details style={{ marginTop: '10px' }}>
-                    <summary>Debug Console</summary>
-                    <pre style={{ textAlign: 'left', whiteSpace: 'pre-wrap' }}>{debugLog}</pre>
-                </details>
-            </div>
-
-            <p className="read-the-docs">
+            <footer className="text-center text-gray-500">
                 Clique nos logos do Vite e React para saber mais.
-            </p>
-        </>
+            </footer>
+        </div>
     );
+
+
 }
 
 export default App;

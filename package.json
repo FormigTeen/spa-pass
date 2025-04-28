@@ -12,9 +12,15 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
+    "@apollo/client": "^3.13.8",
     "@simplewebauthn/browser": "^13.1.0",
+    "@tailwindcss/vite": "^4.1.4",
+    "graphql": "^16.11.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-use": "^17.6.0",
+    "rect-use": "^1.0.0",
+    "tailwindcss": "^4.1.4"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
