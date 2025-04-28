@@ -120,7 +120,7 @@ this in the docs: http://dev.apollodata.com/core/fragments.html#unique-names`):h
             registerPasskeyOptions
         }
     `,n=Vt`
-        mutation registerPasskey($key: String!) {
+        mutation registerPasskey($key: JSON!) {
             registerPasskey(key: $key)
         }
     `,r=Vt`
