@@ -81,7 +81,7 @@ const usePasskey = () => {
     `;
 
     const REGISTER_PASSKEY = gql`
-        mutation registerPasskey($key: String!) {
+        mutation registerPasskey($key: JSON!) {
             registerPasskey(key: $key)
         }
     `;
@@ -150,10 +150,15 @@ function App() {
                 .then(
                     aResponse => registerPasskey({
                         variables: {
-                            key: JSON.stringify(aResponse),
+                            key: aResponse,
                         }
                     })
-                )
+                ).then(aResponse => {
+                    if ( !aResponse.data.registerPasskey ) {
+                        throw new Error('Erro ao registrar passkey');
+                    }
+                    return true
+                })
         } catch (err) {
             if (err instanceof Error) {
                 setError(err.message || 'Erro ao registrar passkey');
