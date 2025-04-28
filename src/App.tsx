@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { browserSupportsWebAuthn } from '@simplewebauthn/browser';
+import {browserSupportsWebAuthn, startRegistration} from '@simplewebauthn/browser';
 import './App.css';
 import {
     ApolloClient,
@@ -7,16 +7,28 @@ import {
     InMemoryCache,
     useMutation,
     useQuery,
-    gql,
+    gql, useLazyQuery,
 } from "@apollo/client";
 
-const httpLink = createHttpLink({
+const httpEcomLink = createHttpLink({
     uri: 'https://api-gateway.cvlb.tech/gql/v1/ecom',
     headers: { 'X-Api-Key': 'TOOYB1KQ6-FAUW-IH4W-LIEF1T4AE6E' },
     credentials: 'include',
 });
-const client = new ApolloClient({
-    link: httpLink,
+
+const httpCoreLink = createHttpLink({
+    uri: 'https://api-gateway.cvlb.tech/gql/v1/core',
+    headers: { 'X-Api-Key': 'TOOYB1KQ6-FAUW-IH4W-LIEF1T4AE6E' },
+    credentials: 'include',
+});
+
+const ecomClient = new ApolloClient({
+    link: httpEcomLink,
+    cache: new InMemoryCache(),
+});
+
+const coreClient = new ApolloClient({
+    link: httpCoreLink,
     cache: new InMemoryCache(),
 });
 
@@ -28,7 +40,7 @@ const useProfile = () => {
     `;
 
 
-    const { data, refetch } = useQuery(GET_PROFILE, { client });
+    const { data, refetch } = useQuery(GET_PROFILE, { client: ecomClient });
 
     const email = data?.profile?.email || '';
 
@@ -45,7 +57,7 @@ const useCode = () => {
             sendEmailVerification(email: $email)
         }
     `;
-    const [getCode] = useMutation(GET_CODE, { client });
+    const [getCode] = useMutation(GET_CODE, { client: ecomClient });
     return { getCode };
 };
 
@@ -55,10 +67,56 @@ const useLogin = () => {
             accessKeySignIn(email: $email, code: $code)
         }
     `;
-    const [toLogin] = useMutation(LOGIN, { client });
+    const [toLogin] = useMutation(LOGIN, { client: ecomClient });
     return {
         toLogin,
     };
+};
+
+const usePasskey = () => {
+    const REGISTER_PASSKEY_OPTIONS = gql`
+        query {
+            registerPasskeyOptions
+        }
+    `;
+
+    const REGISTER_PASSKEY = gql`
+        mutation registerPasskey($key: String!) {
+            registerPasskey(key: $key)
+        }
+    `;
+
+    const AUTH_PASSKEY_OPTIONS = gql`
+        query {
+            loginPasskeyOptions
+        }
+    `;
+
+    const LOGIN_PASSKEY = gql`
+        mutation registerPasskey($email: String!, $key: String!) {
+            loginPasskey(email: $email, key: $key) {
+                email
+            }
+        }
+    `;
+
+    const [getRegisterOptions, { data: registerOptions } ] = useLazyQuery(REGISTER_PASSKEY_OPTIONS, { client: coreClient });
+    const [getAuthOptions, { data: authOptions } ] = useLazyQuery(AUTH_PASSKEY_OPTIONS, { client: coreClient });
+
+    const [registerPasskey] = useMutation(REGISTER_PASSKEY, { client: coreClient });
+    const [loginPasskey] = useMutation(LOGIN_PASSKEY, { client: coreClient });
+
+    return {
+        getRegisterOptions,
+        getAuthOptions,
+
+        registerOptions: registerOptions?.registerPasskeyOptions,
+        authOptions,
+
+        registerPasskey,
+        loginPasskey,
+    };
+
 };
 
 function App() {
@@ -70,12 +128,40 @@ function App() {
     const [step, setStep] = useState<'email' | 'code'>('email');
     const { getCode }                 = useCode();
     const { toLogin }          = useLogin();
+    const { registerOptions, getRegisterOptions, registerPasskey } = usePasskey()
 
     useEffect(() => {
         if (!browserSupportsWebAuthn()) {
             setError("Seu navegador não suporta WebAuthn.");
         }
     }, []);
+
+    useEffect(() => {
+        if (hasEmail) {
+            getRegisterOptions().then(() =>
+                console.log(registerOptions)
+            )
+        }
+    }, [getRegisterOptions, hasEmail, registerOptions]);
+
+    const createPasskey = async () => {
+        try {
+            await startRegistration({optionsJSON: registerOptions})
+                .then(
+                    aResponse => registerPasskey({
+                        variables: {
+                            key: JSON.stringify(aResponse),
+                        }
+                    })
+                )
+        } catch (err) {
+            if (err instanceof Error) {
+                setError(err.message || 'Erro ao registrar passkey');
+            } else {
+                setError('Erro desconhecido');
+            }
+        }
+    }
 
     const handleSendCode = async () => {
         setError('');
@@ -98,6 +184,8 @@ function App() {
         try {
             await toLogin({ variables: { email: inputEmail, code: inputCode } });
             await getEmail();
+            await getRegisterOptions();
+            console.log(registerOptions);
         } catch (err: unknown) {
             if (err instanceof Error) {
                 setError(err.message || 'Erro ao confirmar código');
@@ -106,6 +194,7 @@ function App() {
             }
         }
     };
+
 
     return (
         <div className="container mx-auto p-4">
@@ -178,6 +267,19 @@ function App() {
                         Avançar
                     </button>
                 </div>
+
+
+                {/* --- Botão Registrar Passkey --- */}
+                {registerOptions && (
+                    <div className="flex justify-center mt-4">
+                        <button
+                            onClick={createPasskey}
+                            className="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white"
+                        >
+                            Registrar Passkey
+                        </button>
+                    </div>
+                )}
 
                 {/* --- Mensagens de estado --- */}
                 {hasEmail && (
