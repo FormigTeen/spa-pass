@@ -1,5 +1,9 @@
-import { useState, useEffect } from 'react';
-import {browserSupportsWebAuthn, startRegistration} from '@simplewebauthn/browser';
+import {useState, useEffect, ChangeEvent, FC} from 'react';
+import {
+    browserSupportsWebAuthn,
+    startAuthentication,
+    startRegistration
+} from '@simplewebauthn/browser';
 import './App.css';
 import {
     ApolloClient,
@@ -9,6 +13,7 @@ import {
     useQuery,
     gql, useLazyQuery,
 } from "@apollo/client";
+import {useEffectOnce} from "react-use";
 
 const httpEcomLink = createHttpLink({
     uri: 'https://api-gateway.cvlb.tech/gql/v1/ecom',
@@ -120,32 +125,67 @@ const usePasskey = () => {
 };
 
 function App() {
+    const { getEmail, hasEmail, email } = useProfile();
+    const { registerOptions, getRegisterOptions, registerPasskey, getAuthOptions, loginPasskey, authOptions } = usePasskey()
+    const [passkeyEmail, setPasskeyEmail]     = useState('');
+    const [passkeyMessage, setPasskeyMessage] = useState('');
+    const [passkeyError, setPasskeyError]     = useState('');
     const [inputEmail, setInputEmail] = useState('');
     const [inputCode, setInputCode]   = useState('');
     const [message, setMessage]       = useState('');
     const [error, setError]           = useState('');
-    const { getEmail, hasEmail, email }         = useProfile();
     const [step, setStep] = useState<'email' | 'code'>('email');
     const { getCode }                 = useCode();
     const { toLogin }          = useLogin();
-    const { registerOptions, getRegisterOptions, registerPasskey } = usePasskey()
+
 
     useEffect(() => {
-        if (!browserSupportsWebAuthn()) {
-            setError("Seu navegador não suporta WebAuthn.");
-        }
-    }, []);
-
-    useEffect(() => {
-        if (hasEmail) {
-            getRegisterOptions().then(() =>
-                console.log(registerOptions)
-            )
+        if (hasEmail && !registerOptions) {
+            getRegisterOptions()
         }
     }, [getRegisterOptions, hasEmail, registerOptions]);
 
+
+
+    const handleAuthenticatePasskey = async () => {
+        setPasskeyError('');
+        setPasskeyMessage('');
+        try {
+            await getAuthOptions();
+
+            const assertion = await startAuthentication({
+                optionsJSON: authOptions,
+            });
+
+            const { data } = await loginPasskey({
+                variables: {
+                    email: passkeyEmail,
+                    key: assertion,
+                },
+            });
+
+            if (!data.loginPasskey?.email) {
+                throw new Error('Falha ao autenticar com passkey');
+            }
+            setPasskeyMessage(`Autenticado como ${data.loginPasskey.email}`);
+        } catch (err: unknown) {
+            setPasskeyError(
+                err instanceof Error ? err.message : 'Erro desconhecido ao autenticar'
+            );
+        }
+    };
+
+    useEffectOnce(() => {
+        if (!browserSupportsWebAuthn()) {
+            setError("Seu navegador não suporta WebAuthn.");
+        }
+    });
+
     const createPasskey = async () => {
         try {
+            if (!registerOptions) {
+                throw new Error('Nenhuma opção de registro disponível');
+            }
             await startRegistration({optionsJSON: registerOptions})
                 .then(
                     aResponse => registerPasskey({
@@ -167,7 +207,6 @@ function App() {
             }
         }
     }
-
     const handleSendCode = async () => {
         setError('');
         setMessage('');
@@ -184,13 +223,13 @@ function App() {
         }
     };
 
+
     const handleConfirmCode = async () => {
         setError(''); setMessage('');
         try {
             await toLogin({ variables: { email: inputEmail, code: inputCode } });
             await getEmail();
             await getRegisterOptions();
-            console.log(registerOptions);
         } catch (err: unknown) {
             if (err instanceof Error) {
                 setError(err.message || 'Erro ao confirmar código');
@@ -200,86 +239,44 @@ function App() {
         }
     };
 
+    const isStep = (targets: string[]) => targets.some(target => step === target);
+
 
     return (
         <div className="container mx-auto p-4">
             <h1 className="text-2xl font-bold text-center mb-8">React (Passkey)</h1>
             <div className="shadow rounded-lg p-6 mb-8">
-                {/* --- Formulário de acordo com o step --- */}
-                {step === 'email' && (
-                    <div className="mb-6">
-                        <label htmlFor="email" className="block mb-1">
-                            Digite seu e-mail
-                        </label>
-                        <input
-                            id="email"
-                            type="email"
-                            value={inputEmail}
-                            onChange={e => setInputEmail(e.target.value)}
-                            className="border rounded-md p-2 w-full max-w-xs"
-                        />
-                    </div>
-                )}
+                <h2 className="text-xl font-semibold mb-4">Registro de Passkey</h2>
+                {isStep(['email']) && (<EmailInput
+                    value={inputEmail}
+                    onValue={setInputEmail}
+                />)}
 
-                {step === 'code' && (
-                    <div className="mb-6">
-                        <label htmlFor="code" className="block mb-1">
-                            Digite o código recebido
-                        </label>
-                        <input
-                            id="code"
-                            type="text"
-                            value={inputCode}
-                            onChange={e => setInputCode(e.target.value)}
-                            className="border rounded-md p-2 w-full max-w-xs"
-                        />
-                    </div>
-                )}
+                {isStep(['code']) && (<CodeInput
+                    value={inputCode}
+                    onValue={setInputCode}
+                />)}
 
-                {/* --- Barra de ações: Voltar | Ação (Enviar/Confirmar) | Avançar --- */}
-                <div className="flex justify-center space-x-4 mt-4">
-                    {/* Voltar */}
-                    <button
-                        onClick={() => setStep('email')}
-                        disabled={step === 'email'}
-                        className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
-                    >
-                        Voltar
-                    </button>
-
-                    {/* Botão de ação: envia código ou confirma login */}
-                    <button
-                        onClick={step === 'email' ? handleSendCode : handleConfirmCode}
-                        disabled={
-                            (step === 'email' && !inputEmail.includes('@')) ||
-                            (step === 'code' && !inputCode)
-                        }
-                        className={`px-4 py-2 rounded text-white ${
-                            step === 'email'
-                                ? 'bg-blue-600 hover:bg-blue-700'
-                                : 'bg-green-600 hover:bg-green-700'
-                        } disabled:bg-gray-400`}
-                    >
-                        {step === 'email' ? 'Enviar Código' : 'Confirmar Código'}
-                    </button>
-
-                    {/* Avançar */}
-                    <button
-                        onClick={() => setStep('code')}
-                        disabled={step === 'code'}
-                        className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
-                    >
-                        Avançar
-                    </button>
-                </div>
-
+                <ActionGrid
+                    onBack={() => setStep('email')}
+                    onNext={() => setStep('code')}
+                    onGetCode={handleSendCode}
+                    onConfirmCode={handleConfirmCode}
+                    hasCode={isStep(['code'])}
+                    disabledBack={isStep(['email'])}
+                    disabledNext={!inputEmail.includes('@')}
+                    disabledAction={
+                        isStep(['email']) && !inputEmail.includes('@') ||
+                        isStep(['code']) && !inputCode
+                    }
+                />
 
                 {/* --- Botão Registrar Passkey --- */}
                 {registerOptions && (
                     <div className="flex justify-center mt-4">
                         <button
                             onClick={createPasskey}
-                            className="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white"
+                            className="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white w-full"
                         >
                             Registrar Passkey
                         </button>
@@ -289,20 +286,167 @@ function App() {
                 {/* --- Mensagens de estado --- */}
                 {hasEmail && (
                     <p className="text-green-600 font-medium mt-4">
-                        ✅ Olá, {email}!
+                        ✅ Autenticado como: {email}
                     </p>
                 )}
                 {message && <p className="text-green-600 mt-2">{message}</p>}
                 {error   && <p className="text-red-600 mt-2">{error}</p>}
             </div>
+            {/* 5) Nova seção: Autenticar com Passkey */}
+            <div className="shadow rounded-lg p-6 mb-8">
+                <h2 className="text-xl font-semibold mb-4">Autenticação com Passkey</h2>
 
-            <footer className="text-center text-gray-500">
-                Clique nos logos do Vite e React para saber mais.
-            </footer>
+                <div className="mb-4">
+                    <label htmlFor="passkeyEmail" className="block mb-1">
+                        Digite seu e-mail
+                    </label>
+                    <input
+                        id="passkeyEmail"
+                        type="email"
+                        value={passkeyEmail}
+                        onChange={e => setPasskeyEmail(e.target.value)}
+                        className="border rounded-md p-2 w-full"
+                    />
+                </div>
+
+                <button
+                    onClick={handleAuthenticatePasskey}
+                    disabled={!passkeyEmail.includes('@')}
+                    className="w-full px-4 py-2 rounded bg-purple-600 hover:bg-purple-700 text-white disabled:bg-gray-400"
+                >
+                    Autenticar com Passkey
+                </button>
+
+                {passkeyMessage && (
+                    <p className="text-green-600 mt-2">{passkeyMessage}</p>
+                )}
+                {passkeyError && (
+                    <p className="text-red-600 mt-2">{passkeyError}</p>
+                )}
+            </div>
         </div>
     );
+}
 
+type EmailInputProps = {
+    value?: string;
+    onValue?: (value: string) => unknown;
+}
 
+const EmailInput: FC<EmailInputProps> = ({
+                                             value = "",
+                                             onValue = () => null,
+                                         }) => {
+
+    const handleInput = (e: ChangeEvent<HTMLInputElement>) => {
+        const { value } = e.target;
+        onValue(value);
+    }
+
+    return (
+        <div className="mb-6">
+            <label htmlFor="email" className="block mb-1">
+                Digite seu e-mail
+            </label>
+            <input
+                id="email"
+                type="email"
+                value={value}
+                onChange={handleInput}
+                className="border rounded-md p-2 w-full"
+            />
+        </div>
+    );
+}
+
+type CodeInputProps = {
+    value?: string;
+    onValue?: (value: string) => unknown;
+}
+const CodeInput: FC<CodeInputProps> = ({
+                                           value = "",
+                                           onValue = () => null,
+
+                                       }) => {
+
+    const handleInput = (e: ChangeEvent<HTMLInputElement>) => {
+        const { value } = e.target;
+        onValue(value);
+    }
+
+    return (
+        <div className="mb-6">
+            <label htmlFor="code" className="block mb-1">
+                Digite o código recebido
+            </label>
+            <input
+                id="code"
+                type="text"
+                value={value}
+                onChange={handleInput}
+                className="border rounded-md p-2 w-full max-w-xs"
+            />
+        </div>
+    )
+}
+
+type ActionGridProps = {
+    onBack?: () => unknown;
+    onNext?: () => unknown;
+    disabledBack?: boolean;
+    disabledNext?: boolean;
+    disabledAction?: boolean;
+    hasCode?: boolean;
+    onGetCode?: () => unknown;
+    onConfirmCode?: () => unknown;
+}
+export const ActionGrid: FC<ActionGridProps> = ({
+                                                    onBack = () => null,
+                                                    onNext = () => null,
+                                                    onGetCode = () => null,
+                                                    onConfirmCode = () => null,
+                                                    hasCode = false,
+                                                    disabledBack = false,
+                                                    disabledNext = false,
+                                                    disabledAction = false,
+
+}) => {
+    return (
+        <div className="grid grid-cols-3 gap-4 mt-4">
+            <button
+                onClick={onBack}
+                disabled={disabledBack}
+                className="w-full px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+            >
+                Voltar
+            </button>
+
+            {!hasCode && (<button
+                onClick={onGetCode}
+                disabled={disabledAction}
+                className={`w-full px-4 py-2 rounded text-white bg-blue-600 hover:bg-blue-700'
+                        disabled:bg-gray-400`}
+            >
+                Enviar Código
+            </button>)}
+
+            {hasCode && <button
+                onClick={onConfirmCode}
+                disabled={disabledAction}
+                className={`w-full px-4 py-2 rounded text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-400`}
+            >
+                Confirmar Código
+            </button>}
+
+            <button
+                onClick={onNext}
+                disabled={disabledNext}
+                className="w-full px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+            >
+                Avançar
+            </button>
+        </div>
+    )
 }
 
 export default App;
