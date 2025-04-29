@@ -128,7 +128,7 @@ this in the docs: http://dev.apollodata.com/core/fragments.html#unique-names`):h
             loginPasskeyOptions
         }
     `,l=Vt`
-        mutation registerPasskey($email: String!, $key: JSON!) {
+        mutation loginPasskey($email: String!, $key: JSON!) {
             loginPasskey(email: $email, key: $key) {
                 token
             }
