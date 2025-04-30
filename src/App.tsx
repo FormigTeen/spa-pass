@@ -139,6 +139,14 @@ function App() {
     const { getCode }                 = useCode();
     const { toLogin }          = useLogin();
 
+    useEffectOnce(() => {
+        if (document.hasStorageAccess) {
+            document.hasStorageAccess()
+                .then(has => {
+                    if (!has) return document.requestStorageAccess();
+                })
+        }
+    });
 
     useEffect(() => {
         if (hasEmail && !registerOptions) {
@@ -158,7 +166,6 @@ function App() {
                 },
             }).then(
                 (aResponse) => {
-                    console.log(aResponse.data)
                     return startAuthentication({
                         optionsJSON: aResponse.data.loginPasskeyOptions,
                     })}

@@ -8,7 +8,6 @@ export default defineConfig(
       if ( command === 'build' ) {
         return ({
           plugins: [react(), tailwindcss()],
-          base: '/spa-pass'
         })
       }
       return ({
