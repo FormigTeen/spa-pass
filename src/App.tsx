@@ -92,41 +92,42 @@ const usePasskey = () => {
     `;
 
     const AUTH_PASSKEY_OPTIONS = gql`
-        query {
-            loginPasskeyOptions
+        query loginPasskeyOptions($email: String!) {
+            loginPasskeyOptions(email: $email) 
         }
     `;
 
     const LOGIN_PASSKEY = gql`
-        mutation registerPasskey($email: String!, $key: String!) {
+        mutation loginPasskey($email: String!, $key: JSON!) {
             loginPasskey(email: $email, key: $key) {
-                email
+                token
             }
         }
     `;
 
     const [getRegisterOptions, { data: registerOptions } ] = useLazyQuery(REGISTER_PASSKEY_OPTIONS, { client: coreClient });
-    const [getAuthOptions, { data: authOptions } ] = useLazyQuery(AUTH_PASSKEY_OPTIONS, { client: coreClient });
+    const [getAuthOptions] = useLazyQuery(AUTH_PASSKEY_OPTIONS, { client: coreClient });
 
     const [registerPasskey] = useMutation(REGISTER_PASSKEY, { client: coreClient });
-    const [loginPasskey] = useMutation(LOGIN_PASSKEY, { client: coreClient });
+    const [loginPasskey, { data: loginResponse }] = useMutation(LOGIN_PASSKEY, { client: coreClient });
 
     return {
         getRegisterOptions,
         getAuthOptions,
 
         registerOptions: registerOptions?.registerPasskeyOptions,
-        authOptions,
 
         registerPasskey,
         loginPasskey,
+
+        tokenFirebase: loginResponse?.loginPasskey?.token,
     };
 
 };
 
 function App() {
     const { getEmail, hasEmail, email } = useProfile();
-    const { registerOptions, getRegisterOptions, registerPasskey, getAuthOptions, loginPasskey, authOptions } = usePasskey()
+    const { registerOptions, getRegisterOptions, registerPasskey, getAuthOptions, loginPasskey, tokenFirebase } = usePasskey()
     const [passkeyEmail, setPasskeyEmail]     = useState('');
     const [passkeyMessage, setPasskeyMessage] = useState('');
     const [passkeyError, setPasskeyError]     = useState('');
@@ -151,23 +152,24 @@ function App() {
         setPasskeyError('');
         setPasskeyMessage('');
         try {
-            await getAuthOptions();
-
-            const assertion = await startAuthentication({
-                optionsJSON: authOptions,
-            });
-
-            const { data } = await loginPasskey({
+            await getAuthOptions({
                 variables: {
                     email: passkeyEmail,
-                    key: assertion,
                 },
-            });
-
-            if (!data.loginPasskey?.email) {
-                throw new Error('Falha ao autenticar com passkey');
-            }
-            setPasskeyMessage(`Autenticado como ${data.loginPasskey.email}`);
+            }).then(
+                (aResponse) => {
+                    console.log(aResponse.data)
+                    return startAuthentication({
+                        optionsJSON: aResponse.data.loginPasskeyOptions,
+                    })}
+            ).then(
+                (key) => loginPasskey({
+                    variables: {
+                        email: passkeyEmail,
+                        key,
+                    }
+                })
+            )
         } catch (err: unknown) {
             setPasskeyError(
                 err instanceof Error ? err.message : 'Erro desconhecido ao autenticar'
@@ -283,14 +285,26 @@ function App() {
                     </div>
                 )}
 
-                {/* --- Mensagens de estado --- */}
-                {hasEmail && (
-                    <p className="text-green-600 font-medium mt-4">
-                        ✅ Autenticado como: {email}
-                    </p>
+                {/* --- Status de autenticação --- */}
+                <div className="border-2 border-white rounded-md p-4 mt-4 text-white text-center">
+                    {hasEmail
+                        ? `Autenticado como: ${email}`
+                        : 'Não autenticado'
+                    }
+                </div>
+
+                {message && (
+                    <div className="border-2 border-green-500 rounded-md p-4 mt-4 text-green-500">
+                        {message}
+                    </div>
                 )}
-                {message && <p className="text-green-600 mt-2">{message}</p>}
-                {error   && <p className="text-red-600 mt-2">{error}</p>}
+                {error && (
+                    <div className="border-2 border-orange-500 rounded-md p-4 mt-4 text-orange-500">
+                        {error}
+                    </div>
+                )}
+
+
             </div>
             {/* 5) Nova seção: Autenticar com Passkey */}
             <div className="shadow rounded-lg p-6 mb-8">
@@ -317,6 +331,9 @@ function App() {
                     Autenticar com Passkey
                 </button>
 
+                {tokenFirebase && (<div className="border-2 border-white rounded-md p-4 mt-4 text-white text-center">
+                    Seu token Firebase: {tokenFirebase}
+                </div>)}
                 {passkeyMessage && (
                     <p className="text-green-600 mt-2">{passkeyMessage}</p>
                 )}
@@ -384,7 +401,7 @@ const CodeInput: FC<CodeInputProps> = ({
                 type="text"
                 value={value}
                 onChange={handleInput}
-                className="border rounded-md p-2 w-full max-w-xs"
+                className="border rounded-md p-2 w-full"
             />
         </div>
     )
