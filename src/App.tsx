@@ -1,4 +1,4 @@
-import {useState, useEffect, ChangeEvent, FC} from 'react';
+import {useState, useEffect, ChangeEvent, FC, createContext, ReactNode, useContext} from 'react';
 import {
     browserSupportsWebAuthn,
     startAuthentication,
@@ -37,24 +37,6 @@ const coreClient = new ApolloClient({
     cache: new InMemoryCache(),
 });
 
-const useProfile = () => {
-    const GET_PROFILE = gql`
-        query {
-            profile { email }
-        }
-    `;
-
-
-    const { data, refetch } = useQuery(GET_PROFILE, { client: ecomClient });
-
-    const email = data?.profile?.email || '';
-
-    return {
-        email,
-        hasEmail: !!email && email.includes("@"),
-        getEmail: refetch,
-    };
-};
 
 const useCode = () => {
     const GET_CODE = gql`
@@ -78,67 +60,9 @@ const useLogin = () => {
     };
 };
 
-const usePasskey = () => {
-    const REGISTER_PASSKEY_OPTIONS = gql`
-        query {
-            registerPasskeyOptions
-        }
-    `;
-
-    const REGISTER_PASSKEY = gql`
-        mutation registerPasskey($key: JSON!) {
-            registerPasskey(key: $key)
-        }
-    `;
-
-    const AUTH_PASSKEY_OPTIONS = gql`
-        query loginPasskeyOptions($email: String!) {
-            loginPasskeyOptions(email: $email) 
-        }
-    `;
-
-    const LOGIN_PASSKEY = gql`
-        mutation loginPasskey($email: String!, $key: JSON!) {
-            loginPasskey(email: $email, key: $key) {
-                token
-            }
-        }
-    `;
-
-    const [getRegisterOptions, { data: registerOptions } ] = useLazyQuery(REGISTER_PASSKEY_OPTIONS, { client: coreClient });
-    const [getAuthOptions] = useLazyQuery(AUTH_PASSKEY_OPTIONS, { client: coreClient });
-
-    const [registerPasskey] = useMutation(REGISTER_PASSKEY, { client: coreClient });
-    const [loginPasskey, { data: loginResponse }] = useMutation(LOGIN_PASSKEY, { client: coreClient });
-
-    return {
-        getRegisterOptions,
-        getAuthOptions,
-
-        registerOptions: registerOptions?.registerPasskeyOptions,
-
-        registerPasskey,
-        loginPasskey,
-
-        tokenFirebase: loginResponse?.loginPasskey?.token,
-    };
-
-};
-
-function App() {
-    const { getEmail, hasEmail, email } = useProfile();
-    const { registerOptions, getRegisterOptions, registerPasskey, getAuthOptions, loginPasskey, tokenFirebase } = usePasskey()
-    const [passkeyEmail, setPasskeyEmail]     = useState('');
-    const [passkeyMessage, setPasskeyMessage] = useState('');
-    const [passkeyError, setPasskeyError]     = useState('');
-    const [inputEmail, setInputEmail] = useState('');
-    const [inputCode, setInputCode]   = useState('');
-    const [message, setMessage]       = useState('');
-    const [error, setError]           = useState('');
-    const [step, setStep] = useState<'email' | 'code'>('email');
-    const { getCode }                 = useCode();
-    const { toLogin }          = useLogin();
-
+const StorageProvider: FC<{
+    children: React.ReactNode;
+}> = ({ children }) => {
     useEffectOnce(() => {
         if (document.hasStorageAccess) {
             document.hasStorageAccess()
@@ -148,11 +72,37 @@ function App() {
         }
     });
 
+    return (
+        <>{children}</>
+    );
+}
+
+const AppContainer = () => {
+
+    const { getEmail, hasEmail, email } = useContext(ProfileContext);
+    const {
+        registerOptions,
+        toRegister,
+        toAuth,
+        tokenFirebase
+    } = useContext(PasskeyContext)
+    const [passkeyEmail, setPasskeyEmail]       = useState('');
+    const [passkeyMessage, setPasskeyMessage]   = useState('');
+    const [passkeyError, setPasskeyError]       = useState('');
+    const [inputEmail, setInputEmail]           = useState('');
+    const [inputCode, setInputCode]             = useState('');
+    const [message, setMessage]                 = useState('');
+    const [error, setError]                     = useState('');
+    const [step, setStep]                       = useState<'email' | 'code'>('email');
+    const { getCode }                           = useCode();
+    const { toLogin }                           = useLogin();
+
+
     useEffect(() => {
         if (hasEmail && !registerOptions) {
-            getRegisterOptions()
+            toRegister()
         }
-    }, [getRegisterOptions, hasEmail, registerOptions]);
+    }, [toRegister, hasEmail, registerOptions]);
 
 
 
@@ -160,23 +110,7 @@ function App() {
         setPasskeyError('');
         setPasskeyMessage('');
         try {
-            await getAuthOptions({
-                variables: {
-                    email: passkeyEmail,
-                },
-            }).then(
-                (aResponse) => {
-                    return startAuthentication({
-                        optionsJSON: aResponse.data.loginPasskeyOptions,
-                    })}
-            ).then(
-                (key) => loginPasskey({
-                    variables: {
-                        email: passkeyEmail,
-                        key,
-                    }
-                })
-            )
+            await toAuth(passkeyEmail)
         } catch (err: unknown) {
             setPasskeyError(
                 err instanceof Error ? err.message : 'Erro desconhecido ao autenticar'
@@ -190,32 +124,6 @@ function App() {
         }
     });
 
-    const createPasskey = async () => {
-        try {
-            if (!registerOptions) {
-                throw new Error('Nenhuma opção de registro disponível');
-            }
-            await startRegistration({optionsJSON: registerOptions})
-                .then(
-                    aResponse => registerPasskey({
-                        variables: {
-                            key: aResponse,
-                        }
-                    })
-                ).then(aResponse => {
-                    if ( !aResponse.data.registerPasskey ) {
-                        throw new Error('Erro ao registrar passkey');
-                    }
-                    return true
-                })
-        } catch (err) {
-            if (err instanceof Error) {
-                setError(err.message || 'Erro ao registrar passkey');
-            } else {
-                setError('Erro desconhecido');
-            }
-        }
-    }
     const handleSendCode = async () => {
         setError('');
         setMessage('');
@@ -238,7 +146,7 @@ function App() {
         try {
             await toLogin({ variables: { email: inputEmail, code: inputCode } });
             await getEmail();
-            await getRegisterOptions();
+            await toRegister();
         } catch (err: unknown) {
             if (err instanceof Error) {
                 setError(err.message || 'Erro ao confirmar código');
@@ -249,6 +157,7 @@ function App() {
     };
 
     const isStep = (targets: string[]) => targets.some(target => step === target);
+
 
 
     return (
@@ -281,10 +190,10 @@ function App() {
                 />
 
                 {/* --- Botão Registrar Passkey --- */}
-                {registerOptions && (
+                {Boolean(registerOptions) && (
                     <div className="flex justify-center mt-4">
                         <button
-                            onClick={createPasskey}
+                            onClick={toRegister}
                             className="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-700 text-white w-full"
                         >
                             Registrar Passkey
@@ -349,7 +258,7 @@ function App() {
                 )}
             </div>
         </div>
-    );
+    )
 }
 
 type EmailInputProps = {
@@ -471,6 +380,170 @@ export const ActionGrid: FC<ActionGridProps> = ({
             </button>
         </div>
     )
+}
+
+const PasskeyContext = createContext<{
+        registerOptions: unknown | null;
+        toRegister: () => Promise<unknown>;
+        toAuth: (value: string) => Promise<unknown>;
+        authOptions: unknown | null;
+        registerPasskey: () => Promise<unknown>;
+        loginPasskey: () => Promise<unknown>;
+        tokenFirebase: string | null;
+    }>({
+    registerOptions: null,
+    toRegister: async (): Promise<unknown> => null,
+    authOptions: null,
+    toAuth: async (): Promise<unknown> => null,
+    registerPasskey: async (): Promise<unknown> => null,
+    loginPasskey: async (): Promise<unknown> => null,
+    tokenFirebase: null,
+})
+
+const PasskeyProvider: FC<{
+    children: ReactNode;
+}> = ({
+          children
+      }) => {
+
+    const REGISTER_PASSKEY_OPTIONS = gql`
+        query {
+            registerPasskeyOptions
+        }
+    `;
+
+    const REGISTER_PASSKEY = gql`
+        mutation registerPasskey($key: JSON!) {
+            registerPasskey(key: $key)
+        }
+    `;
+
+    const AUTH_PASSKEY_OPTIONS = gql`
+        query loginPasskeyOptions($email: String!) {
+            loginPasskeyOptions(email: $email)
+        }
+    `;
+
+    const LOGIN_PASSKEY = gql`
+        mutation loginPasskey($email: String!, $key: JSON!) {
+            loginPasskey(email: $email, key: $key) {
+                token
+            }
+        }
+    `;
+
+    const [getRegisterOptionsQuery, { data: registerOptions } ] = useLazyQuery(REGISTER_PASSKEY_OPTIONS, { client: coreClient });
+    const [getAuthOptionsQUery, { data: authOptions }] = useLazyQuery(AUTH_PASSKEY_OPTIONS, { client: coreClient });
+
+    const [registerPasskey] = useMutation(REGISTER_PASSKEY, { client: coreClient });
+    const [loginPasskey, { data: loginResponse }] = useMutation(LOGIN_PASSKEY, { client: coreClient });
+
+    const [wasRegistered, setWasRegistered] = useState(false);
+    const [wasAuthenticated, setWasAuthenticated] = useState(false);
+
+    const toRegister = async () => {
+        if (wasRegistered || wasAuthenticated) return true;
+        return getRegisterOptionsQuery().then(
+            (aResponse) =>
+                startRegistration({optionsJSON: aResponse.data.registerPasskeyOptions})
+                    .then(
+                        aResponse => registerPasskey({
+                            variables: {
+                                key: aResponse,
+                            }
+                        })
+                    ).then(() => setWasRegistered(true))
+        )
+    }
+
+    const toAuth = async (email: string) => {
+        if (wasAuthenticated) return true;
+        return getAuthOptionsQUery({
+            variables: {
+                email,
+            }
+        })
+            .then(aResponse =>
+                startAuthentication({
+                    optionsJSON: aResponse.data.loginPasskeyOptions,
+                })
+            ).then(
+                (key) => loginPasskey({
+                    variables: {
+                        email: email,
+                        key,
+                    }
+                })
+            )
+            .finally(() => setWasAuthenticated(true))
+    }
+
+    const aContext = {
+        toRegister,
+        toAuth,
+
+        registerOptions: registerOptions?.registerPasskeyOptions || null,
+        authOptions: authOptions?.loginPasskeyOptions?.loginPasskeyOptions || null,
+
+        registerPasskey,
+        loginPasskey,
+
+        tokenFirebase: loginResponse?.loginPasskey?.token,
+    };
+
+    return (
+        <PasskeyContext.Provider value={aContext}>
+            <>{children}</>
+        </PasskeyContext.Provider>
+    );
+}
+
+
+const ProfileContext = createContext({
+    email: '',
+    hasEmail: false,
+    getEmail: async (): Promise<unknown> => null,
+})
+const ProfileProvider: FC<{
+    children: ReactNode;
+}> = ({
+          children
+      }) => {
+
+    const GET_PROFILE = gql`
+        query {
+            profile { email }
+        }
+    `;
+
+    const { data, refetch } = useQuery(GET_PROFILE, { client: ecomClient });
+
+    const email = String(data?.profile?.email || '');
+
+    const aContext = {
+        email,
+        hasEmail: !!email && email.includes("@"),
+        getEmail: refetch,
+    }
+
+    return (
+        <ProfileContext.Provider value={aContext}>
+            {children}
+        </ProfileContext.Provider>
+    )
+}
+
+
+function App() {
+    return (
+        <StorageProvider>
+            <ProfileProvider>
+                <PasskeyProvider>
+                    <AppContainer />
+                </PasskeyProvider>
+            </ProfileProvider>
+        </StorageProvider>
+    );
 }
 
 export default App;
