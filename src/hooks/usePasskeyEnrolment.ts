@@ -36,7 +36,7 @@ export function usePasskeyEnrolment() {
   const { data: profile, isFetched } = useProfile();
   const [passkeyEmails, setPasskeyEmails] = useAtom(passkeyEmailsAtom);
   const [dismissed, setDismissed] = useAtom(enrolDismissedAtom);
-  const { hasPasskey, enrolPasskey } = usePasskey();
+  const { enrolPasskey } = usePasskey();
 
   const [status, setStatus] = useState<EnrolmentStatus>("checking");
   const [error, setError] = useState("");
@@ -84,22 +84,17 @@ export function usePasskeyEnrolment() {
 
     started.current = true;
 
-    (async () => {
-      setStatus("checking");
-      // Trust the local hint first so the card does not flash for users who
-      // already enrolled, then confirm with the gateway.
-      if (passkeyEmails.includes(email)) setStatus("enrolled");
-
-      const owns = await hasPasskey(email);
-      if (owns) {
-        setStatus("enrolled");
-        return;
-      }
-      setStatus(dismissed.includes(email) ? "dismissed" : "offer");
-    })();
+    // Enrolment is per device, not per account. The gateway would say "yes,
+    // there is a key" for a credential sitting on the user's laptop, which
+    // would leave a phone with no way to enrol one of its own.
+    if (passkeyEmails.includes(email)) {
+      setStatus("enrolled");
+      return;
+    }
+    setStatus(dismissed.includes(email) ? "dismissed" : "offer");
     // `passkeyEmails` is read as a hint only; re-running on it would loop.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, isFetched, canEnrol, dismissed, email, hasPasskey]);
+  }, [session, isFetched, canEnrol, dismissed, email, passkeyEmails]);
 
   return { status, error, enrol, dismiss, canEnrol };
 }

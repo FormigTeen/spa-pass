@@ -41,7 +41,15 @@ export const lastEmailAtom = atomWithStorage<string>(
   "",
 );
 
-/** Emails known to have a passkey enrolled, so the UI can act instantly. */
+/**
+ * Emails that enrolled a passkey **on this device**.
+ *
+ * This is deliberately not the same question the gateway answers.
+ * `allowCredentials` tells you the *account* owns a credential somewhere — on
+ * a laptop, say — while a phone that never enrolled has nothing to sign with.
+ * Prompting on the account-level answer makes the OS say "no passkey
+ * available", so only this local list may trigger a prompt.
+ */
 export const passkeyEmailsAtom = atomWithStorage<string[]>(
   "passkey-poc:passkey-emails",
   [],

@@ -71,6 +71,9 @@ export function useAutoPasskeyLogin(): PasskeyGate {
   /** Options are single-use challenges; hold them only until the next prompt. */
   const pending = useRef<{ email: string; options: AuthOptions } | null>(null);
   const autoRan = useRef(false);
+  /** Mirrors the persisted list so callbacks stay stable. */
+  const enrolledHere = useRef(passkeyEmails);
+  enrolledHere.current = passkeyEmails;
 
   const rememberKey = useCallback(
     (email: string, owns: boolean) =>
@@ -96,7 +99,6 @@ export function useAutoPasskeyLogin(): PasskeyGate {
         const options = await loginOptions(email);
         const owns = Boolean(options?.allowCredentials?.length);
         probed.current.set(email, owns);
-        rememberKey(email, owns);
         setCheckedEmail(email);
         setHasKey(owns);
         pending.current = owns ? { email, options } : null;
@@ -109,7 +111,7 @@ export function useAutoPasskeyLogin(): PasskeyGate {
         return false;
       }
     },
-    [loginOptions, rememberKey],
+    [loginOptions],
   );
 
   const prompt = useCallback(
@@ -153,7 +155,10 @@ export function useAutoPasskeyLogin(): PasskeyGate {
 
       setStatus("checking");
       const owns = await probe(email);
-      if (!owns) {
+
+      // The account owning a credential is not enough: it may live on another
+      // device, and prompting here would only raise "no passkey available".
+      if (!owns || !enrolledHere.current.includes(email)) {
         setStatus("idle");
         return;
       }
@@ -169,7 +174,6 @@ export function useAutoPasskeyLogin(): PasskeyGate {
     if (!lastEmail || !supportsPasskey()) return;
 
     autoRan.current = true;
-    setHasKey(passkeyEmails.includes(lastEmail));
     void attempt(lastEmail);
     // `passkeyEmails` is an optimistic hint; depending on it would re-run this.
     // eslint-disable-next-line react-hooks/exhaustive-deps
