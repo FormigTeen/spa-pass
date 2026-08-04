@@ -22,8 +22,12 @@ export type PasskeyGate = {
   status: PasskeyGateStatus;
   email: string;
   error: string;
-  /** Explicit request: raise the OS sheet now. */
-  attempt: (email: string) => void;
+  /**
+   * Raise the OS sheet now. Resolves true when the session is open, false when
+   * the passkey was cancelled, refused, or simply not available — the caller
+   * decides what to fall back to.
+   */
+  attempt: (email: string) => Promise<boolean>;
   /**
    * Arm the autofill offer. Called by the component that owns the email input,
    * because the browser requires that input to be in the DOM for the whole
@@ -70,16 +74,20 @@ export function useAutoPasskeyLogin(): PasskeyGate {
 
   /** Modal sheet. Only ever reached because the user asked for it. */
   const attempt = useCallback(
-    async (email: string) => {
-      if (!email || !supportsPasskey()) return;
+    async (email: string): Promise<boolean> => {
+      if (!email || !supportsPasskey()) return false;
       setStatus("prompting");
       setError("");
       try {
         const token = await loginWithPasskey(email);
         await finish(token);
+        return true;
       } catch (caught) {
-        setStatus("failed");
-        setError(isUserCancellation(caught) ? "" : passkeyErrorMessage(caught));
+        // Not surfaced as an error: the caller falls back to the code, and a
+        // passkey that was never going to work should not read as a failure.
+        setStatus("idle");
+        if (!isUserCancellation(caught)) setError("");
+        return false;
       }
     },
     [loginWithPasskey, finish],
@@ -106,7 +114,7 @@ export function useAutoPasskeyLogin(): PasskeyGate {
     status,
     email: lastEmail,
     error,
-    attempt: (email) => void attempt(email),
+    attempt,
     startConditional: (email) => void startConditional(email),
     retry: () => void attempt(lastEmail),
     skip: () => setStatus("idle"),

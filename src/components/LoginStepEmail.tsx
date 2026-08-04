@@ -8,7 +8,7 @@ import {
 } from "react";
 import { motion } from "framer-motion";
 import { useAtom, useAtomValue } from "jotai";
-import { Fingerprint, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { draftEmailAtom, lastEmailAtom, loginStepAtom } from "../state/atoms";
 import { useEmailCodeAuth } from "../hooks/useAuth";
 import { gatewayErrorMessage } from "../lib/gateway";
@@ -23,6 +23,7 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
   const [, setStep] = useAtom(loginStepAtom);
   const [focused, setFocused] = useState(false);
   const [error, setError] = useState("");
+  const [tryingPasskey, setTryingPasskey] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { requestCode } = useEmailCodeAuth();
 
@@ -40,10 +41,7 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
   }, [lastEmail]);
 
   const isValid = EMAIL_PATTERN.test(email);
-  // Whether a key exists is no longer knowable from here — login options carry
-  // no credential list — so the offer stands on any valid address and the
-  // browser decides what it can actually do with it.
-  const offerPasskey = isValid;
+  const busy = tryingPasskey || requestCode.isPending;
 
   // Autofill only fills. Conditional mediation already offers the passkey in
   // the same dropdown, so raising a sheet on top of it would compete with it.
@@ -71,10 +69,22 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
 
   const handleBlur = () => setFocused(false);
 
+  /**
+   * One button, two routes. The passkey is tried first because it finishes in
+   * a single gesture; anything that stops it — cancelled, refused, no
+   * credential on this device — falls through to the emailed code rather than
+   * leaving the person stuck on a failure they did not choose.
+   */
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!isValid || requestCode.isPending) return;
+    if (!isValid || busy) return;
     setError("");
+
+    setTryingPasskey(true);
+    const signedIn = await gate.attempt(email);
+    setTryingPasskey(false);
+    if (signedIn) return;
+
     try {
       await requestCode.mutateAsync(email);
       setStep("code");
@@ -134,35 +144,25 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
 
         <motion.button
           type="submit"
-          disabled={!isValid || requestCode.isPending}
+          disabled={!isValid || busy}
           whileTap={isValid ? { scale: 0.98 } : undefined}
           className={cn(
             "mt-8 w-full py-4 px-6 rounded-xl text-base font-medium",
             "flex items-center justify-center gap-2 transition-all duration-300",
-            isValid && !requestCode.isPending
+            isValid && !busy
               ? "bg-cream text-ink hover:bg-cream/90"
               : "bg-cream/10 text-cream/35 cursor-not-allowed",
           )}
         >
-          {requestCode.isPending && (
-            <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
-          )}
-          {requestCode.isPending ? "Enviando código..." : "Continuar"}
+          {busy && <Loader2 className="w-4 h-4 animate-spin" aria-hidden />}
+          {tryingPasskey
+            ? "Verificando..."
+            : requestCode.isPending
+              ? "Enviando código..."
+              : "Continuar"}
         </motion.button>
       </form>
 
-      {offerPasskey && (
-        <motion.button
-          type="button"
-          onClick={() => gate.attempt(email)}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="mt-4 w-full py-4 px-6 rounded-xl border-2 border-cream/20 text-cream font-medium flex items-center justify-center gap-2 hover:border-cream transition-colors"
-        >
-          <Fingerprint className="w-5 h-5" aria-hidden />
-          Entrar com biometria
-        </motion.button>
-      )}
 
       {gate.error && (
         <p role="alert" className="mt-4 text-sm text-red-300">
