@@ -12,6 +12,18 @@ import { Loader2 } from "lucide-react";
 import { draftEmailAtom, lastEmailAtom, loginStepAtom } from "../state/atoms";
 import { useEmailCodeAuth } from "../hooks/useAuth";
 import { gatewayErrorMessage } from "../lib/gateway";
+
+/**
+ * The gateway answers a blocked address with a bare "Request failed with
+ * status code 401", which tells the person nothing and looks like a bug. Too
+ * many attempts is the common cause, so say that and leave the rest generic.
+ */
+const codeRequestMessage = (error: unknown) => {
+  const raw = gatewayErrorMessage(error, "");
+  if (/401|403|blocked|bloquead/i.test(raw))
+    return "Não foi possível enviar o código agora. Isso costuma acontecer após várias tentativas seguidas — aguarde alguns minutos e tente de novo.";
+  return "Não foi possível enviar o código. Tente novamente em instantes.";
+};
 import { cn } from "../lib/cn";
 import type { PasskeyGate } from "../hooks/useAutoPasskeyLogin";
 
@@ -83,7 +95,7 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
       await requestCode.mutateAsync(email);
       setStep("code");
     } catch (caught) {
-      setError(gatewayErrorMessage(caught, "Não foi possível enviar o código."));
+      setError(codeRequestMessage(caught));
     }
   };
 

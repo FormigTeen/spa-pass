@@ -14,9 +14,11 @@ export function WhitePanel() {
 
   const content = () => {
     if (authenticated) return <WelcomeScreen key="welcome" />;
-    // `checking` is a background request — it must not take the screen. The
-    // form stays up, and if there is nothing to prompt the user never notices.
-    if (gate.status === "prompting" || gate.status === "linking")
+    // Only once the passkey is through. While the OS sheet is up the sheet is
+    // already the interface, and swapping the form out unmounts it — taking
+    // its error and progress state with it, so a failure afterwards had
+    // nothing left to report.
+    if (gate.status === "linking")
       return <PasskeyGateScreen key="gate" gate={gate} />;
     if (step === "code") return <LoginStepCode key="code" />;
     return <LoginStepEmail key="email" gate={gate} />;
