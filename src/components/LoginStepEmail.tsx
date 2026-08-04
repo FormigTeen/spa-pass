@@ -1,4 +1,11 @@
-import { useEffect, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type AnimationEvent,
+  type FormEvent,
+} from "react";
 import { motion } from "framer-motion";
 import { useAtom, useAtomValue } from "jotai";
 import { Fingerprint, Loader2 } from "lucide-react";
@@ -16,6 +23,7 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
   const [, setStep] = useAtom(loginStepAtom);
   const [focused, setFocused] = useState(false);
   const [error, setError] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
   const { requestCode } = useEmailCodeAuth();
 
   // Prefill with the remembered email the first time the form is shown.
@@ -24,7 +32,42 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
   }, [email, lastEmail, setEmail]);
 
   const isValid = EMAIL_PATTERN.test(email);
-  const offerPasskey = gate.hasKey && gate.email === email;
+  const offerPasskey = gate.hasKey && gate.checkedEmail === email;
+
+  /**
+   * An autofilled email is a deliberate pick from the browser's dropdown, so
+   * it is a fair trigger for the biometric prompt — the gate still confirms
+   * with the gateway before anything pops up.
+   */
+  const handleAutofill = useCallback(
+    (value: string) => {
+      if (!value || value === email) return;
+      setEmail(value);
+      if (EMAIL_PATTERN.test(value)) gate.attempt(value);
+    },
+    [email, setEmail, gate],
+  );
+
+  const handleAnimationStart = (event: AnimationEvent<HTMLInputElement>) => {
+    if (event.animationName !== "onAutoFillStart") return;
+    handleAutofill(inputRef.current?.value ?? "");
+  };
+
+  // The browser can fill the field before React hydrates, leaving the
+  // controlled value empty while the DOM already holds an email.
+  useEffect(() => {
+    const filled = inputRef.current?.value;
+    if (filled) handleAutofill(filled);
+    // Only on mount — later changes come through onChange/onAnimationStart.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Typed by hand: check quietly so the biometric button can appear, but do
+  // not hijack the flow with a prompt the user did not ask for.
+  const handleBlur = () => {
+    setFocused(false);
+    if (isValid && email !== gate.checkedEmail) gate.probe(email);
+  };
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -55,15 +98,22 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
 
       <form onSubmit={handleSubmit} className="mt-10">
         <div className="relative">
+          <label htmlFor="email" className="sr-only">
+            Email
+          </label>
           <input
+            ref={inputRef}
+            id="email"
+            name="email"
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
+            onBlur={handleBlur}
+            // Chrome/Safari fill the field without firing a React change event;
+            // the keyframe on :-webkit-autofill makes it observable.
+            onAnimationStart={handleAnimationStart}
             placeholder="seu@email.com"
-            aria-label="Email"
-            // `webauthn` lets the browser surface saved passkeys in autofill.
             autoComplete="username webauthn"
             autoFocus
             className={cn(

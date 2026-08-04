@@ -21,20 +21,29 @@ export type PasskeyGateStatus =
   | "prompting" // the OS biometric sheet is up
   | "failed"; // the attempt did not complete
 
+type AuthOptions = { allowCredentials?: unknown[] } & Record<string, unknown>;
+
 export type PasskeyGate = {
   status: PasskeyGateStatus;
   email: string;
   error: string;
-  /** True once we know the stored email really has a credential. */
+  /** True once the gateway confirmed `checkedEmail` owns a credential. */
   hasKey: boolean;
+  /** The email `hasKey` refers to. */
+  checkedEmail: string;
+  /** Full run: confirm the key, then raise the biometric prompt. */
+  attempt: (email: string) => void;
+  /** Confirm the key without prompting — just reveals the biometric button. */
+  probe: (email: string) => void;
   retry: () => void;
   skip: () => void;
 };
 
 /**
- * Requirement: a returning user whose email we remember, who is not signed in
- * and already owns a passkey, gets the biometric prompt without touching
- * anything. Any failure falls back to the email + code form.
+ * Requirements: a returning user whose email we remember — or one the browser
+ * autofills — gets the biometric prompt without touching anything, provided
+ * the gateway confirms a credential exists. Any failure falls back to the
+ * email + code form.
  */
 export function useAutoPasskeyLogin(): PasskeyGate {
   const lastEmail = useAtomValue(lastEmailAtom);
@@ -50,8 +59,16 @@ export function useAutoPasskeyLogin(): PasskeyGate {
 
   const [status, setStatus] = useState<PasskeyGateStatus>("idle");
   const [error, setError] = useState("");
-  const [hasKey, setHasKey] = useState(() => passkeyEmails.includes(lastEmail));
-  const attempted = useRef(false);
+  const [checkedEmail, setCheckedEmail] = useState("");
+  const [hasKey, setHasKey] = useState(false);
+
+  /** email → owns a credential. Avoids re-asking the gateway per keystroke. */
+  const probed = useRef(new Map<string, boolean>());
+  /** Emails already taken all the way to a prompt, so we never nag twice. */
+  const attempted = useRef(new Set<string>());
+  /** Options are single-use challenges; hold them only until the next prompt. */
+  const pending = useRef<{ email: string; options: AuthOptions } | null>(null);
+  const autoRan = useRef(false);
 
   const rememberKey = useCallback(
     (email: string, owns: boolean) =>
@@ -62,10 +79,47 @@ export function useAutoPasskeyLogin(): PasskeyGate {
     [setPasskeyEmails],
   );
 
+  const probe = useCallback(
+    async (email: string): Promise<boolean> => {
+      if (!email || !supportsPasskey()) return false;
+
+      const cached = probed.current.get(email);
+      if (cached !== undefined) {
+        setCheckedEmail(email);
+        setHasKey(cached);
+        return cached;
+      }
+
+      try {
+        const options = await loginOptions(email);
+        const owns = Boolean(options?.allowCredentials?.length);
+        probed.current.set(email, owns);
+        rememberKey(email, owns);
+        setCheckedEmail(email);
+        setHasKey(owns);
+        pending.current = owns ? { email, options } : null;
+        return owns;
+      } catch {
+        // Unknown email, or the gateway has no credentials for it.
+        probed.current.set(email, false);
+        setCheckedEmail(email);
+        setHasKey(false);
+        return false;
+      }
+    },
+    [loginOptions, rememberKey],
+  );
+
   const prompt = useCallback(
-    async (email: string, preloaded?: Record<string, unknown> | null) => {
+    async (email: string) => {
       setStatus("prompting");
       setError("");
+
+      // Reuse the challenge from the probe when it is still fresh.
+      const preloaded =
+        pending.current?.email === email ? pending.current.options : null;
+      pending.current = null;
+
       try {
         const token = await loginWithPasskey(email, preloaded);
         signIn({ email: token.email, token: token.token, via: "passkey" });
@@ -80,48 +134,45 @@ export function useAutoPasskeyLogin(): PasskeyGate {
     [loginWithPasskey, signIn, rememberKey],
   );
 
+  const attempt = useCallback(
+    async (email: string) => {
+      if (!email || attempted.current.has(email)) return;
+      if (!supportsPasskey()) return;
+      attempted.current.add(email);
+
+      setStatus("checking");
+      const owns = await probe(email);
+      if (!owns) {
+        setStatus("idle");
+        return;
+      }
+      await prompt(email);
+    },
+    [probe, prompt],
+  );
+
+  // Returning user: stored email, not signed in, gateway confirms a key.
   useEffect(() => {
-    if (attempted.current) return;
+    if (autoRan.current) return;
     if (!profileChecked || session || signedOut) return;
     if (!lastEmail || !supportsPasskey()) return;
 
-    attempted.current = true;
-
-    (async () => {
-      setStatus("checking");
-      try {
-        const options = await loginOptions(lastEmail);
-        const owns = Boolean(options?.allowCredentials?.length);
-        rememberKey(lastEmail, owns);
-        setHasKey(owns);
-
-        if (!owns) {
-          setStatus("idle");
-          return;
-        }
-        await prompt(lastEmail, options);
-      } catch {
-        rememberKey(lastEmail, false);
-        setHasKey(false);
-        setStatus("idle");
-      }
-    })();
-  }, [
-    profileChecked,
-    session,
-    signedOut,
-    lastEmail,
-    loginOptions,
-    prompt,
-    rememberKey,
-  ]);
+    autoRan.current = true;
+    setHasKey(passkeyEmails.includes(lastEmail));
+    void attempt(lastEmail);
+    // `passkeyEmails` is an optimistic hint; depending on it would re-run this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileChecked, session, signedOut, lastEmail, attempt]);
 
   return {
     status,
     email: lastEmail,
     error,
     hasKey,
-    retry: () => void prompt(lastEmail),
+    checkedEmail,
+    attempt: (email) => void attempt(email),
+    probe: (email) => void probe(email),
+    retry: () => void prompt(checkedEmail || lastEmail),
     skip: () => setStatus("idle"),
   };
 }

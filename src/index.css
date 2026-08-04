@@ -27,6 +27,40 @@ body {
   color: #111827;
 }
 
+/**
+ * Browser autofill sets the value without firing an input event, so React
+ * never sees it. Chrome/Safari do apply `:-webkit-autofill`, and starting an
+ * animation there gives us an `animationstart` event to listen for.
+ */
+@keyframes onAutoFillStart {
+  from {
+    outline-color: transparent;
+  }
+  to {
+    outline-color: transparent;
+  }
+}
+
+input:-webkit-autofill {
+  animation-name: onAutoFillStart;
+  animation-duration: 1ms;
+  /* Autofill's yellow wash would fight the flat design. */
+  -webkit-text-fill-color: #111827;
+  transition: background-color 600000s 0s;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Transcript scrolls, but the scrollbar would break the red panel's edge. */
 .no-scrollbar {
   scrollbar-width: none;
