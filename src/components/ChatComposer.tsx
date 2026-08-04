@@ -69,7 +69,7 @@ export function ChatComposer({
             "p-2 rounded-lg transition-all duration-200",
             ready
               ? "bg-cream text-brand hover:bg-cream/90"
-              : "bg-cream/10 text-cream/40 cursor-not-allowed",
+              : "bg-cream/10 text-cream/40",
           )}
         >
           <Send className="w-5 h-5" aria-hidden />

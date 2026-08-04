@@ -65,6 +65,20 @@ input:-webkit-autofill {
   transition: background-color 600000s 0s;
 }
 
+/**
+ * Browsers give `<button>` a default cursor, and Tailwind's preflight does not
+ * change it. Anything pressable should say so under the pointer, so this
+ * covers every control at once rather than one class at a time.
+ */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

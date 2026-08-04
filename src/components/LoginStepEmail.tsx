@@ -140,7 +140,7 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
             "flex items-center justify-center gap-2 transition-all duration-300",
             isValid && !busy
               ? "bg-cream text-ink hover:bg-cream/90"
-              : "bg-cream/10 text-cream/35 cursor-not-allowed",
+              : "bg-cream/10 text-cream/35",
           )}
         >
           {busy && <Loader2 className="w-4 h-4 animate-spin" aria-hidden />}

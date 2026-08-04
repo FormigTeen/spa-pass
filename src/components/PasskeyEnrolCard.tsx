@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, KeyRound, Loader2, X } from "lucide-react";
+import { ChevronRight, KeyRound, Loader2, X } from "lucide-react";
 import type { usePasskeyEnrolment } from "../hooks/usePasskeyEnrolment";
+import { cn } from "../lib/cn";
 
 type Enrolment = ReturnType<typeof usePasskeyEnrolment>;
 
@@ -27,7 +28,12 @@ export function PasskeyEnrolCard({ enrolment }: { enrolment: Enrolment }) {
               type="button"
               onClick={() => void enrol()}
               disabled={busy}
-              className="group w-full rounded-2xl bg-white p-5 pr-12 text-left transition-transform disabled:cursor-wait enabled:hover:-translate-y-0.5"
+              className={cn(
+                "group w-full rounded-2xl bg-white p-5 pr-12 text-left",
+                "shadow-sm transition-all duration-200 disabled:cursor-wait",
+                "enabled:hover:-translate-y-0.5 enabled:hover:shadow-lg",
+                "enabled:active:translate-y-0 enabled:active:scale-[0.99]",
+              )}
             >
               <span className="flex items-center gap-4">
                 <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-ink/5 text-ink">
@@ -52,8 +58,10 @@ export function PasskeyEnrolCard({ enrolment }: { enrolment: Enrolment }) {
                 </span>
               </span>
 
-              <ArrowRight
-                className="absolute bottom-4 right-4 h-4 w-4 text-ink/30 transition-transform group-enabled:group-hover:translate-x-0.5"
+              {/* Centred on the edge, the way a row that opens something
+                  usually points to itself. */}
+              <ChevronRight
+                className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-ink/25 transition-all group-enabled:group-hover:translate-x-0.5 group-enabled:group-hover:text-ink/60"
                 aria-hidden
               />
             </button>
@@ -62,7 +70,7 @@ export function PasskeyEnrolCard({ enrolment }: { enrolment: Enrolment }) {
               type="button"
               onClick={dismiss}
               aria-label="Agora não"
-              className="absolute right-3 top-3 grid h-7 w-7 place-items-center rounded-full text-ink/40 transition-colors hover:bg-ink/5 hover:text-ink"
+              className="absolute right-2 top-2 z-10 grid h-7 w-7 place-items-center rounded-full text-ink/40 transition-colors hover:bg-ink/10 hover:text-ink"
             >
               <X className="h-4 w-4" aria-hidden />
             </button>
