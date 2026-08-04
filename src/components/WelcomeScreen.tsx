@@ -26,7 +26,7 @@ export function WelcomeScreen() {
     >
       {/* Top — who is signed in, and the passkey upsell. */}
       <div className="space-y-3">
-        <ProfileCard enrolment={enrolment.status} />
+        <ProfileCard enrolment={enrolment} />
         <PasskeyEnrolCard enrolment={enrolment} />
       </div>
 

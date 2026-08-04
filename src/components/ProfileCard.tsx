@@ -1,9 +1,11 @@
 import { motion } from "framer-motion";
 import { useAtomValue } from "jotai";
-import { Fingerprint, KeyRound, Mail, ShieldCheck } from "lucide-react";
+import { Fingerprint, Mail } from "lucide-react";
 import { sessionAtom } from "../state/atoms";
 import { useProfile } from "../hooks/useProfile";
-import type { EnrolmentStatus } from "../hooks/usePasskeyEnrolment";
+import type { usePasskeyEnrolment } from "../hooks/usePasskeyEnrolment";
+
+type Enrolment = ReturnType<typeof usePasskeyEnrolment>;
 
 const maskDocument = (document?: string | null) => {
   if (!document) return null;
@@ -12,14 +14,15 @@ const maskDocument = (document?: string | null) => {
   return `•••.${digits.slice(3, 6)}.${digits.slice(6, 9)}-••`;
 };
 
-export function ProfileCard({ enrolment }: { enrolment: EnrolmentStatus }) {
+export function ProfileCard({ enrolment }: { enrolment: Enrolment }) {
   const session = useAtomValue(sessionAtom);
   const { data: profile } = useProfile();
 
   if (!session) return null;
 
   const document = maskDocument(profile?.document ?? session.document);
-  const enrolled = enrolment === "enrolled";
+  // Declined earlier: the ask is gone, so this is the only way back in.
+  const canReconsider = enrolment.status === "dismissed";
 
   return (
     <motion.section
@@ -42,16 +45,27 @@ export function ProfileCard({ enrolment }: { enrolment: EnrolmentStatus }) {
             {document ? `Documento ${document}` : "Sessão ativa"}
           </p>
 
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <Badge
               icon={session.via === "passkey" ? Fingerprint : Mail}
               label={session.via === "passkey" ? "Biometria" : "Código por email"}
             />
-            <Badge
-              icon={enrolled ? ShieldCheck : KeyRound}
-              label={enrolled ? "Chave registrada" : "Sem chave neste dispositivo"}
-              tone={enrolled ? "positive" : "muted"}
-            />
+
+            {/*
+              A registered key needs no announcement — the card only speaks up
+              when there is something to do. This is the way back for someone
+              who declined the ask earlier.
+            */}
+            {canReconsider && (
+              <button
+                type="button"
+                onClick={() => void enrolment.enrol()}
+                className="inline-flex items-center gap-1.5 rounded-full border border-gray-900 px-2.5 py-1 text-[11px] font-medium text-gray-900 transition-colors hover:bg-gray-900 hover:text-white"
+              >
+                <Fingerprint className="w-3.5 h-3.5" aria-hidden />
+                Registrar digital
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -5,9 +5,9 @@ import type { usePasskeyEnrolment } from "../hooks/usePasskeyEnrolment";
 type Enrolment = ReturnType<typeof usePasskeyEnrolment>;
 
 /**
- * The upsell that appears when the account has no passkey. It explains itself
- * first and the OS sheet follows a beat later, so the prompt never arrives
- * unexplained — and "Agora não" is remembered per email.
+ * The ask that appears when the account has no passkey on this device. The OS
+ * sheet only opens on "Sim, registrar" — never on its own — and "Agora não" is
+ * remembered per email so the question is not repeated.
  */
 export function PasskeyEnrolCard({ enrolment }: { enrolment: Enrolment }) {
   const { status, error, enrol, dismiss } = enrolment;
@@ -45,12 +45,12 @@ export function PasskeyEnrolCard({ enrolment }: { enrolment: Enrolment }) {
                 <p className="text-sm font-medium">
                   {status === "prompting"
                     ? "Confirme no seu dispositivo"
-                    : "Ative a entrada por biometria"}
+                    : "Quer entrar com a digital da próxima vez?"}
                 </p>
                 <p className="mt-1 text-sm text-white/70 leading-relaxed">
                   {status === "prompting"
                     ? "Estamos criando sua chave de acesso neste dispositivo."
-                    : "Da próxima vez você entra com a digital, sem esperar por código no email."}
+                    : "Registramos uma chave de acesso neste aparelho e você entra sem esperar código no email."}
                 </p>
 
                 {error && (
@@ -66,7 +66,7 @@ export function PasskeyEnrolCard({ enrolment }: { enrolment: Enrolment }) {
                       onClick={() => void enrol()}
                       className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-900 hover:bg-white/90 transition-colors"
                     >
-                      {status === "error" ? "Tentar de novo" : "Ativar agora"}
+                      {status === "error" ? "Tentar de novo" : "Sim, registrar"}
                     </button>
                     <button
                       type="button"

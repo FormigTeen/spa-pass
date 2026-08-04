@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm -rf zipsrc)",
+      "Bash(mkdir -p zipsrc)",
+      "Bash(unzip -q ~/Downloads/react-app-login.zip -d zipsrc)",
+      "Read(//home/matheus/Codes/**)",
+      "Bash(yarn remove *)",
+      "Bash(yarn add *)",
+      "Bash(sed -i 's|<title>.*</title>|<title>Passkey \\\\&amp; Agent POC</title>|' index.html)",
+      "Bash(npx tsc *)",
+      "Bash(yarn build *)",
+      "mcp__playwright__browser_resize",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_type",
+      "mcp__playwright__browser_network_requests",
+      "mcp__playwright__browser_evaluate",
+      "Bash(nohup yarn dev)",
+      "Bash(getent hosts *)",
+      "Bash(pkill -f \"vite\")",
+      "Bash(chmod +x scripts/hosts.mjs)",
+      "Bash(node scripts/hosts.mjs --dry)",
+      "Bash(kill %1)",
+      "Bash(node -e ' *)",
+      "mcp__playwright__browser_run_code_unsafe",
+      "Bash(echo \"── tsc exit: $?\")",
+      "Bash(python3 -c ' *)",
+      "Bash(echo \"── exit: $?\")",
+      "Bash(git ls-remote *)",
+      "Bash(git fetch *)",
+      "Bash(gh auth *)",
+      "Bash(gh api *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} → %{redirect_url}\\\\n\" -m 15 http://pass.cvlb.tech/)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" -m 15 https://pass.cvlb.tech/)",
+      "Bash(python3 -)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
+    ]
+  }
+}
