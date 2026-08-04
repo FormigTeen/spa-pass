@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
 import { deviceEnrolledAtom, lastEmailAtom } from "../state/atoms";
 import {
@@ -23,28 +23,30 @@ export type PasskeyGate = {
   email: string;
   error: string;
   /**
-   * Raise the OS sheet now. Resolves true when the session is open, false when
-   * the passkey was cancelled, refused, or simply not available — the caller
-   * decides what to fall back to.
+   * Arm the autofill offer for an address. Called by the component that owns
+   * the email input: the browser needs that input in the DOM for the whole
+   * call, so a parent cannot promise it.
    */
-  attempt: (email: string) => Promise<boolean>;
-  retry: () => void;
-  skip: () => void;
+  startConditional: (email: string) => void;
 };
 
 /**
- * The passkey attempt behind Continue.
+ * The passkey offer, through **conditional mediation**: the browser lists the
+ * key inside the email field's own autofill dropdown, and only when it really
+ * holds one.
  *
- * Nothing here guesses which devices hold keys. WebAuthn offers no way to ask
- * "does this device hold credential X" — enumerating credentials would be a
- * fingerprinting vector — so the question is put to the authenticator itself,
- * scoped to the address on screen and to credentials the device can serve. It
- * answers by prompting or by refusing at once, and a refusal simply routes to
- * the emailed code.
+ * This is the only silent way to ask the question. A modal ceremony always
+ * shows something — the picker, or "no passkeys registered" — because a
+ * WebAuthn call that could answer invisibly would let any page fingerprint
+ * which credentials a device carries. Conditional mediation moves the decision
+ * to the browser, which can answer honestly without telling the page anything:
+ * a device with no key simply gets no suggestion.
  */
 export function useAutoPasskeyLogin(): PasskeyGate {
   const lastEmail = useAtomValue(lastEmailAtom);
-  const { loginWithPasskey } = usePasskey();
+  const { conditionalLogin } = usePasskey();
+  /** Address the autofill offer is currently armed for. */
+  const armedFor = useRef<string | null>(null);
   const queryClient = useQueryClient();
   const setDeviceEnrolled = useSetAtom(deviceEnrolledAtom);
 
@@ -72,37 +74,29 @@ export function useAutoPasskeyLogin(): PasskeyGate {
     [queryClient, setDeviceEnrolled],
   );
 
-  /**
-   * The silent check behind Continue: restricted to credentials this device
-   * holds, so it either prompts or fails at once. False means "no key here",
-   * which is a route rather than a failure.
-   */
-  const attempt = useCallback(
-    async (email: string): Promise<boolean> => {
-      if (!email || !supportsPasskey()) return false;
-      setStatus("prompting");
-      setError("");
+  const startConditional = useCallback(
+    async (email: string) => {
+      if (!email || !supportsPasskey()) return;
+      // Re-arming for a different address is the point: the offer must belong
+      // to the email on screen. The library aborts the pending call for us.
+      if (armedFor.current === email) return;
+      armedFor.current = email;
+
       try {
-        const token = await loginWithPasskey(email, null, true);
-        await finish(token);
-        return true;
+        const token = await conditionalLogin(email);
+        if (token) await finish(token);
       } catch (caught) {
-        setStatus("idle");
-        // "No key here" is a route, not a failure — the code is waiting behind
-        // it. Only a break in the session hand-off is worth showing.
-        setError(isUserCancellation(caught) ? "" : passkeyErrorMessage(caught));
-        return false;
+        // Aborted by a re-arm, or simply never picked.
+        if (!isUserCancellation(caught)) setError(passkeyErrorMessage(caught));
       }
     },
-    [loginWithPasskey, finish],
+    [conditionalLogin, finish],
   );
 
   return {
     status,
     email: lastEmail,
     error,
-    attempt,
-    retry: () => void attempt(lastEmail),
-    skip: () => setStatus("idle"),
+    startConditional: (email) => void startConditional(email),
   };
 }

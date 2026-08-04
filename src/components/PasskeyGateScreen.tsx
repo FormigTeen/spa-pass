@@ -48,15 +48,6 @@ export function PasskeyGateScreen({ gate }: { gate: PasskeyGate }) {
         )}
       </p>
 
-      {!linking && (
-      <button
-        type="button"
-        onClick={gate.skip}
-        className="mt-10 text-sm text-cream/60 hover:text-cream transition-colors"
-      >
-        Usar outro método
-      </button>
-      )}
     </motion.div>
   );
 }

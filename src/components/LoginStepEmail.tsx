@@ -35,7 +35,6 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
   const [, setStep] = useAtom(loginStepAtom);
   const [focused, setFocused] = useState(false);
   const [error, setError] = useState("");
-  const [tryingPasskey, setTryingPasskey] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { requestCode } = useEmailCodeAuth();
 
@@ -44,8 +43,17 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
     if (!email && lastEmail) setEmail(lastEmail);
   }, [email, lastEmail, setEmail]);
 
+  // Arm the offer from here: the browser needs this input present for the
+  // whole call. Re-armed as the address changes, so what the dropdown offers
+  // always belongs to the email on screen.
+  useEffect(() => {
+    const target = EMAIL_PATTERN.test(email) ? email : lastEmail;
+    if (target) gate.startConditional(target);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [email, lastEmail]);
+
   const isValid = EMAIL_PATTERN.test(email);
-  const busy = tryingPasskey || requestCode.isPending;
+  const busy = requestCode.isPending;
 
   // Autofill only fills. Conditional mediation already offers the passkey in
   // the same dropdown, so raising a sheet on top of it would compete with it.
@@ -74,22 +82,16 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
   const handleBlur = () => setFocused(false);
 
   /**
-   * The key first, the code as the fallback.
-   *
-   * The attempt is scoped to this address and to credentials this device can
-   * serve, so it costs nothing when there is no key: the authenticator matches
-   * nothing and returns immediately, without a sheet. Only a device that
-   * really holds the key sees a prompt.
+   * Straight to the emailed code. The key is never tried from here: a modal
+   * ceremony always shows something, so an address without one would be met
+   * with "no passkeys registered" before its code arrived. The offer lives in
+   * the field's own autofill list instead, where the browser shows it only
+   * when it holds a key and stays quiet otherwise.
    */
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!isValid || busy) return;
     setError("");
-
-    setTryingPasskey(true);
-    const signedIn = await gate.attempt(email);
-    setTryingPasskey(false);
-    if (signedIn) return;
 
     try {
       await requestCode.mutateAsync(email);
@@ -112,6 +114,15 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
       </h1>
       <p className="mt-4 text-lg text-cream/60 leading-relaxed">
         Digite seu email para entrar na plataforma.
+      </p>
+      {/*
+        The offer only ever appears in the field's autofill list, which is easy
+        to miss if nobody says so — someone with a key would otherwise press
+        Continue and wait for a code they did not need.
+      */}
+      <p className="mt-2 text-sm text-cream/40 leading-relaxed">
+        Já tem uma chave de acesso neste aparelho? Toque no campo abaixo para
+        entrar com ela.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-10">
@@ -161,11 +172,7 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
           )}
         >
           {busy && <Loader2 className="w-4 h-4 animate-spin" aria-hidden />}
-          {tryingPasskey
-            ? "Verificando..."
-            : requestCode.isPending
-              ? "Enviando código..."
-              : "Continuar"}
+          {busy ? "Enviando código..." : "Continuar"}
         </motion.button>
       </form>
 

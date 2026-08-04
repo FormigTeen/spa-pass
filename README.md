@@ -103,11 +103,16 @@ origem de todos os bugs desta área: modal abrindo sozinho, QR no desktop,
 "nenhuma chave disponível" ao sair. A mediação condicional entrega a decisão a
 quem consegue tomá-la, e o modo de falha vira silêncio.
 
-**O `Continuar` vai direto para o código.** A chave nunca passa por ele: um
-prompt modal ofereceria *todas* as credenciais que o aparelho guarda para o
-relying party — as opções de login não trazem mais lista de credenciais, de
-propósito — então quem digita um email sem chave veria a de outra conta,
-escolheria, e o servidor recusaria com razão.
+**O `Continuar` vai direto para o código.** A chave nunca passa por ele, e o
+motivo é uma limitação real: **não existe verificação silenciosa com prompt
+modal**. Um `navigator.credentials.get()` sem mediação condicional sempre
+mostra algo — o seletor, ou "nenhuma chave registrada". É proposital: uma
+chamada capaz de responder invisivelmente deixaria qualquer página descobrir
+quais credenciais o aparelho carrega.
+
+A mediação condicional é a única forma silenciosa. Quem decide se há chave é o
+navegador, que responde honestamente sem contar nada para a página: aparelho
+sem chave simplesmente não recebe sugestão.
 
 **Registro (`usePasskeyEnrolment`)** — o card só aparece quando a conta não tem
 **nenhuma** chave, e isso vem do `excludeCredentials` do
