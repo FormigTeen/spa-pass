@@ -6,6 +6,7 @@ import {
   startRegistration,
 } from "@simplewebauthn/browser";
 import { core, gatewayErrorMessage } from "../lib/gateway";
+import { ensureStorageAccess, isStorageAccessError } from "../lib/storageAccess";
 import {
   PASSKEY_LOGIN,
   PASSKEY_LOGIN_OPTIONS,
@@ -41,6 +42,7 @@ export const isAlreadyRegistered = (error: unknown) =>
     /credential manager/i.test(error.message));
 
 export const passkeyErrorMessage = (error: unknown) => {
+  if (isStorageAccessError(error)) return error.message;
   if (isNoCredentials(error)) return "Essa conta ainda não tem uma chave de acesso.";
   if (isUserCancellation(error)) return "Autenticação cancelada.";
   if (isAlreadyRegistered(error))
@@ -102,6 +104,8 @@ export function usePasskey() {
   );
 
   const enrolPasskey = useCallback(async () => {
+    await ensureStorageAccess();
+
     const optionsJSON = await registerOptions();
     if (!optionsJSON) throw new Error("Não foi possível iniciar o registro da chave.");
 

@@ -16,11 +16,9 @@ const queryClient = new QueryClient({
 function StorageProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!document.hasStorageAccess) return;
-    document
-      .hasStorageAccess()
-      .then((granted) => (granted ? null : document.requestStorageAccess()))
-      // Browsers reject this without a user gesture; first-party use is fine.
-      .catch(() => null);
+    // Requesting access without a user gesture is rejected on mobile browsers.
+    // The passkey flows ask from the actual tap that starts authentication.
+    void document.hasStorageAccess().catch(() => null);
   }, []);
 
   return <>{children}</>;
