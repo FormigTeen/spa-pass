@@ -42,7 +42,7 @@ export function WelcomeScreen() {
           transition={{ delay: 0.15, duration: 0.4 }}
           className="text-4xl md:text-5xl lg:text-6xl font-medium text-gray-900 tracking-tight block"
         >
-          Bem-vindo..
+          Bem-vindo,
         </motion.span>
         <motion.span
           initial={{ opacity: 0, y: 10 }}
