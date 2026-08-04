@@ -21,11 +21,14 @@ export function ProfileCard({ enrolment }: { enrolment: Enrolment }) {
   if (!session) return null;
 
   const document = maskDocument(profile?.document ?? session.document);
-  // The proactive ask only fires for accounts with no key at all, so this is
-  // how any other device — a phone whose key lives on a laptop, or someone who
-  // said no earlier — still gets to enrol one of its own.
-  const canReconsider =
-    enrolment.status === "dismissed" || enrolment.status === "enrolled";
+  // Keyed to the device, not the account: a phone whose key lives on a laptop
+  // still needs a way in, while a device that has just signed in with a key
+  // needs nothing. The card below covers the case where it is already asking.
+  const asking =
+    enrolment.status === "offer" ||
+    enrolment.status === "prompting" ||
+    enrolment.status === "error";
+  const canReconsider = enrolment.canEnrol && !enrolment.deviceHasKey && !asking;
 
   return (
     <motion.section

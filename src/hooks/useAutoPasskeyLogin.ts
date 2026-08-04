@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
-import { useAtomValue } from "jotai";
-import { lastEmailAtom } from "../state/atoms";
+import { useAtomValue, useSetAtom } from "jotai";
+import { deviceEnrolledAtom, lastEmailAtom } from "../state/atoms";
 import {
   isUserCancellation,
   passkeyErrorMessage,
@@ -56,6 +56,7 @@ export function useAutoPasskeyLogin(): PasskeyGate {
   const lastEmail = useAtomValue(lastEmailAtom);
   const { loginWithPasskey, conditionalLogin } = usePasskey();
   const queryClient = useQueryClient();
+  const setDeviceEnrolled = useSetAtom(deviceEnrolledAtom);
 
   const [status, setStatus] = useState<PasskeyGateStatus>("idle");
   const [error, setError] = useState("");
@@ -70,10 +71,16 @@ export function useAutoPasskeyLogin(): PasskeyGate {
     async (token: PasskeyToken) => {
       setStatus("linking");
       await completeVtexFirebaseSession(token.token);
+
+      // Signing in with a key is proof this device holds one. Nothing we could
+      // ask beforehand is as reliable, so record it and stop offering.
+      setDeviceEnrolled((current) =>
+        current.includes(token.email) ? current : [...current, token.email],
+      );
       await queryClient.invalidateQueries({ queryKey: profileQueryKey });
       setStatus("idle");
     },
-    [queryClient],
+    [queryClient, setDeviceEnrolled],
   );
 
   /** Modal sheet. Only ever reached because the user asked for it. */

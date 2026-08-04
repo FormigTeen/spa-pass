@@ -39,6 +39,8 @@ export const draftEmailAtom = atom("");
 export const lastEmailAtom = atomWithStorage<string>(
   "passkey-poc:last-email",
   "",
+  undefined,
+  { getOnInit: true },
 );
 
 /**
@@ -57,12 +59,19 @@ export const lastEmailAtom = atomWithStorage<string>(
 export const deviceEnrolledAtom = atomWithStorage<string[]>(
   "passkey-poc:device-enrolled",
   [],
+  undefined,
+  // Without `getOnInit` these atoms start empty and hydrate a tick later —
+  // long enough for a one-shot effect to run against the wrong value and
+  // offer enrolment to a device that had already answered.
+  { getOnInit: true },
 );
 
 /** Emails that declined the enrolment upsell — do not nag them again. */
 export const enrolDismissedAtom = atomWithStorage<string[]>(
   "passkey-poc:enrol-dismissed",
   [],
+  undefined,
+  { getOnInit: true },
 );
 
 /* ── chat ────────────────────────────────────────────────────── */

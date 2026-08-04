@@ -120,5 +120,13 @@ export function usePasskeyEnrolment() {
     })();
   }, [session, isFetched, canEnrol, dismissed, deviceEnrolled, email, registerOptions]);
 
-  return { status, error, enrol, dismiss, canEnrol };
+  return {
+    status,
+    error,
+    enrol,
+    dismiss,
+    canEnrol,
+    /** This device is known to hold a key — learned, never assumed. */
+    deviceHasKey: deviceEnrolled.includes(email),
+  };
 }
