@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useSetAtom } from "jotai";
 import {
   isNoCredentials,
   isUserCancellation,
@@ -9,7 +10,8 @@ import {
   type PasskeyToken,
 } from "./usePasskey";
 import { completeVtexFirebaseSession } from "../lib/vtexFirebaseSession";
-import { profileQueryKey } from "./useProfile";
+import { fetchProfile, profileQueryKey } from "./useProfile";
+import { signedOutAtom } from "../state/atoms";
 
 export type PasskeyGateStatus = "idle" | "prompting" | "linking" | "failed";
 
@@ -25,6 +27,7 @@ export type PasskeyGate = {
 export function useAutoPasskeyLogin(): PasskeyGate {
   const { loginWithPasskey } = usePasskey();
   const queryClient = useQueryClient();
+  const setSignedOut = useSetAtom(signedOutAtom);
 
   const [status, setStatus] = useState<PasskeyGateStatus>("idle");
   const [error, setError] = useState("");
@@ -33,10 +36,18 @@ export function useAutoPasskeyLogin(): PasskeyGate {
     async (token: PasskeyToken) => {
       setStatus("linking");
       await completeVtexFirebaseSession(token.token);
-      await queryClient.invalidateQueries({ queryKey: profileQueryKey });
+
+      // Signing in again lifts the flag a previous sign out left behind. It
+      // disables the profile query, so an invalidate would refetch nothing.
+      setSignedOut(false);
+      await queryClient.fetchQuery({
+        queryKey: profileQueryKey,
+        queryFn: fetchProfile,
+      });
+
       setStatus("idle");
     },
-    [queryClient],
+    [queryClient, setSignedOut],
   );
 
   const attempt = useCallback(
