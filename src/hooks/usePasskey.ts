@@ -22,31 +22,25 @@ export const isUserCancellation = (error: unknown) =>
   error instanceof Error &&
   (error.name === "NotAllowedError" || error.name === "AbortError");
 
+/**
+ * Passkeys sync across a Google or iCloud account, so a phone can already
+ * reach the key created on a laptop. Registration is then correctly refused
+ * via `excludeCredentials` — but Android surfaces that as a generic
+ * "unknown error ... credential manager" rather than InvalidStateError.
+ */
+export const isAlreadyRegistered = (error: unknown) =>
+  error instanceof Error &&
+  (error.name === "InvalidStateError" ||
+    /credential manager/i.test(error.message));
+
 export const passkeyErrorMessage = (error: unknown) => {
   if (isUserCancellation(error)) return "Autenticação cancelada.";
-  if (error instanceof Error && error.name === "InvalidStateError")
-    return "Este dispositivo já possui uma chave registrada para esta conta.";
+  if (isAlreadyRegistered(error))
+    return "Este aparelho já tem acesso a uma chave desta conta.";
   return gatewayErrorMessage(error, "Não foi possível usar a chave de acesso.");
 };
 
 export const supportsPasskey = () => browserSupportsWebAuthn();
-
-/**
- * Registration: ask for this device's built-in sensor. Without
- * `authenticatorAttachment: "platform"` the browser opens its full picker —
- * phone over QR, security key, another device — and the fingerprint is one
- * option buried in it. Client-side hints only; the challenge stays valid.
- */
-const preferBuiltInSensor = <T extends Record<string, unknown>>(options: T) => ({
-  ...options,
-  authenticatorSelection: {
-    residentKey: "preferred",
-    userVerification: "preferred",
-    ...((options.authenticatorSelection as object) ?? {}),
-    authenticatorAttachment: "platform",
-  },
-  hints: ["client-device"],
-});
 
 /**
  * Authentication has no `authenticatorSelection` — sending it there does
@@ -128,9 +122,9 @@ export function usePasskey() {
     const optionsJSON = optionsData.passkeyRegisterOptions;
     if (!optionsJSON) throw new Error("Não foi possível iniciar o registro da chave.");
 
-    const key = await startRegistration({
-      optionsJSON: preferBuiltInSensor(optionsJSON as Record<string, unknown>) as never,
-    });
+    // Passed through untouched: the gateway already asks for the platform
+    // authenticator and sends its own `hints`.
+    const key = await startRegistration({ optionsJSON: optionsJSON as never });
 
     const data = await core<{ passkeyRegister: boolean }>(PASSKEY_REGISTER, {
       key,

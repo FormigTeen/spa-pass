@@ -6,6 +6,7 @@ import {
   sessionAtom,
 } from "../state/atoms";
 import {
+  isAlreadyRegistered,
   isUserCancellation,
   passkeyErrorMessage,
   supportsPasskey,
@@ -57,6 +58,16 @@ export function usePasskeyEnrolment() {
     } catch (caught) {
       if (isUserCancellation(caught)) {
         setStatus("offer");
+        setError("");
+        return;
+      }
+      // A synced passkey the device can already reach: nothing to create, and
+      // nothing is broken — record it so we stop asking.
+      if (isAlreadyRegistered(caught)) {
+        setPasskeyEmails((current) =>
+          current.includes(email) ? current : [...current, email],
+        );
+        setStatus("enrolled");
         setError("");
         return;
       }
