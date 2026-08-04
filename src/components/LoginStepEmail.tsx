@@ -32,12 +32,13 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
   }, [email, lastEmail, setEmail]);
 
   // Arm the autofill offer from here: the browser needs this input present for
-  // the whole call, and only this component can promise that.
+  // the whole call, and only this component can promise that. Re-armed when the
+  // address changes, so the offer always belongs to the email on screen.
   useEffect(() => {
-    if (lastEmail) gate.startConditional(lastEmail);
-    // Once per mount of the form.
+    const target = EMAIL_PATTERN.test(email) ? email : lastEmail;
+    if (target) gate.startConditional(target);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastEmail]);
+  }, [email, lastEmail]);
 
   const isValid = EMAIL_PATTERN.test(email);
   const busy = requestCode.isPending;

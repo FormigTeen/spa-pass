@@ -60,7 +60,7 @@ export function useAutoPasskeyLogin(): PasskeyGate {
 
   const [status, setStatus] = useState<PasskeyGateStatus>("idle");
   const [error, setError] = useState("");
-  const conditionalStarted = useRef(false);
+  const conditionalStarted = useRef<string | null>(null);
 
   /**
    * Everything after the passkey itself: Firebase, then the VTEX session. It
@@ -106,9 +106,11 @@ export function useAutoPasskeyLogin(): PasskeyGate {
 
   const startConditional = useCallback(
     async (email: string) => {
-      if (conditionalStarted.current) return;
       if (!email || !supportsPasskey()) return;
-      conditionalStarted.current = true;
+      // Re-arming for a different address is the point: the offer must belong
+      // to the email on screen. The library aborts the pending call for us.
+      if (conditionalStarted.current === email) return;
+      conditionalStarted.current = email;
 
       try {
         const token = await conditionalLogin(email);
