@@ -23,7 +23,6 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
   const [, setStep] = useAtom(loginStepAtom);
   const [focused, setFocused] = useState(false);
   const [error, setError] = useState("");
-  const [tryingPasskey, setTryingPasskey] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { requestCode } = useEmailCodeAuth();
 
@@ -41,7 +40,7 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
   }, [lastEmail]);
 
   const isValid = EMAIL_PATTERN.test(email);
-  const busy = tryingPasskey || requestCode.isPending;
+  const busy = requestCode.isPending;
 
   // Autofill only fills. Conditional mediation already offers the passkey in
   // the same dropdown, so raising a sheet on top of it would compete with it.
@@ -70,20 +69,19 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
   const handleBlur = () => setFocused(false);
 
   /**
-   * One button, two routes. The passkey is tried first because it finishes in
-   * a single gesture; anything that stops it — cancelled, refused, no
-   * credential on this device — falls through to the emailed code rather than
-   * leaving the person stuck on a failure they did not choose.
+   * Straight to the emailed code. The passkey never goes through this button.
+   *
+   * A modal prompt would offer every credential this device holds for the
+   * relying party — login options carry no credential list any more, by design
+   * — so someone typing an address with no key gets shown a different
+   * account's, picks it, and the server rightly refuses. Conditional mediation
+   * has already made its silent offer on load, where the browser matches the
+   * credential itself and shows nothing when there is none.
    */
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!isValid || busy) return;
     setError("");
-
-    setTryingPasskey(true);
-    const signedIn = await gate.attempt(email);
-    setTryingPasskey(false);
-    if (signedIn) return;
 
     try {
       await requestCode.mutateAsync(email);
@@ -155,11 +153,7 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
           )}
         >
           {busy && <Loader2 className="w-4 h-4 animate-spin" aria-hidden />}
-          {tryingPasskey
-            ? "Verificando..."
-            : requestCode.isPending
-              ? "Enviando código..."
-              : "Continuar"}
+          {busy ? "Enviando código..." : "Continuar"}
         </motion.button>
       </form>
 

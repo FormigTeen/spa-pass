@@ -103,8 +103,11 @@ origem de todos os bugs desta área: modal abrindo sozinho, QR no desktop,
 "nenhuma chave disponível" ao sair. A mediação condicional entrega a decisão a
 quem consegue tomá-la, e o modo de falha vira silêncio.
 
-O prompt modal sobreviveu só atrás do botão explícito, onde um erro é
-consequência do que a pessoa pediu.
+**O `Continuar` vai direto para o código.** A chave nunca passa por ele: um
+prompt modal ofereceria *todas* as credenciais que o aparelho guarda para o
+relying party — as opções de login não trazem mais lista de credenciais, de
+propósito — então quem digita um email sem chave veria a de outra conta,
+escolheria, e o servidor recusaria com razão.
 
 **Registro (`usePasskeyEnrolment`)** — o card só aparece quando a conta não tem
 **nenhuma** chave, e isso vem do `excludeCredentials` do
