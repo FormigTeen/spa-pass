@@ -24,23 +24,18 @@ const codeRequestMessage = (error: unknown) => {
   return "Não foi possível enviar o código. Tente novamente em instantes.";
 };
 
-type PasskeyAvailability = "idle" | "checking" | "available" | "unavailable";
-
 export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
   const [email, setEmail] = useAtom(draftEmailAtom);
   const [, setStep] = useAtom(loginStepAtom);
   const [focused, setFocused] = useState(false);
   const [error, setError] = useState("");
   const [authenticating, setAuthenticating] = useState(false);
-  const [passkeyAvailability, setPasskeyAvailability] =
-    useState<PasskeyAvailability>("idle");
   const inputRef = useRef<HTMLInputElement>(null);
   const { requestCode } = useEmailCodeAuth();
   const { hasPasskey } = gate;
 
   const isValid = EMAIL_PATTERN.test(email);
   const busy = authenticating || requestCode.isPending;
-  const showPasskeyButton = passkeyAvailability === "available";
 
   const handleAutofill = useCallback(
     (value: string) => {
@@ -66,28 +61,6 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
 
   const handleBlur = () => setFocused(false);
 
-  useEffect(() => {
-    if (!isValid) {
-      setPasskeyAvailability("idle");
-      return;
-    }
-
-    let cancelled = false;
-    setPasskeyAvailability("checking");
-
-    const timeout = window.setTimeout(() => {
-      void hasPasskey(email).then((available) => {
-        if (cancelled) return;
-        setPasskeyAvailability(available ? "available" : "unavailable");
-      });
-    }, 300);
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timeout);
-    };
-  }, [email, hasPasskey, isValid]);
-
   const sendCode = async () => {
     setError("");
 
@@ -110,6 +83,13 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
     setError("");
 
     setAuthenticating(true);
+    const available = await hasPasskey(email);
+    if (!available) {
+      setAuthenticating(false);
+      await sendCode();
+      return;
+    }
+
     const outcome = await gate.attempt(email);
     setAuthenticating(false);
 
@@ -183,30 +163,28 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
           {requestCode.isPending ? "Enviando código..." : "Receber código"}
         </motion.button>
 
-        {showPasskeyButton && (
-          <motion.button
-            type="button"
-            disabled={!isValid || busy}
-            onClick={handlePasskey}
-            whileTap={isValid ? { scale: 0.98 } : undefined}
-            className={cn(
-              "mt-3 w-full py-4 px-6 rounded-xl text-base font-medium",
-              "flex items-center justify-center gap-2 border transition-all duration-300",
-              isValid && !busy
-                ? "border-cream/40 text-cream hover:border-cream hover:bg-cream/10"
-                : "border-cream/10 text-cream/30",
-            )}
-          >
-            {authenticating ? (
-              <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
-            ) : (
-              <KeyRound className="w-4 h-4" aria-hidden />
-            )}
-            {authenticating
-              ? "Verificando chave..."
-              : "Usar chave deste dispositivo"}
-          </motion.button>
-        )}
+        <motion.button
+          type="button"
+          disabled={!isValid || busy}
+          onClick={handlePasskey}
+          whileTap={isValid ? { scale: 0.98 } : undefined}
+          className={cn(
+            "mt-3 w-full py-4 px-6 rounded-xl text-base font-medium",
+            "flex items-center justify-center gap-2 border transition-all duration-300",
+            isValid && !busy
+              ? "border-cream/40 text-cream hover:border-cream hover:bg-cream/10"
+              : "border-cream/10 text-cream/30",
+          )}
+        >
+          {authenticating ? (
+            <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+          ) : (
+            <KeyRound className="w-4 h-4" aria-hidden />
+          )}
+          {authenticating
+            ? "Verificando chave..."
+            : "Usar chave deste dispositivo"}
+        </motion.button>
       </form>
 
 
