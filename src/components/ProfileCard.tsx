@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useAtomValue } from "jotai";
-import { Fingerprint, Mail } from "lucide-react";
+import { Fingerprint } from "lucide-react";
 import { sessionAtom } from "../state/atoms";
 import { useProfile } from "../hooks/useProfile";
 import type { usePasskeyEnrolment } from "../hooks/usePasskeyEnrolment";
@@ -45,52 +45,23 @@ export function ProfileCard({ enrolment }: { enrolment: Enrolment }) {
             {document ? `Documento ${document}` : "Sessão ativa"}
           </p>
 
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Badge
-              icon={session.via === "passkey" ? Fingerprint : Mail}
-              label={session.via === "passkey" ? "Biometria" : "Código por email"}
-            />
-
-            {/*
-              A registered key needs no announcement — the card only speaks up
-              when there is something to do. This is the way back for someone
-              who declined the ask earlier.
-            */}
-            {canReconsider && (
-              <button
-                type="button"
-                onClick={() => void enrolment.enrol()}
-                className="inline-flex items-center gap-1.5 rounded-full border border-gray-900 px-2.5 py-1 text-[11px] font-medium text-gray-900 transition-colors hover:bg-gray-900 hover:text-white"
-              >
-                <Fingerprint className="w-3.5 h-3.5" aria-hidden />
-                Registrar digital
-              </button>
-            )}
-          </div>
+          {/*
+            The card stays quiet unless something needs doing: how you signed
+            in is not actionable, and a registered key needs no announcement.
+            This is the only way back for someone who declined the ask.
+          */}
+          {canReconsider && (
+            <button
+              type="button"
+              onClick={() => void enrolment.enrol()}
+              className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-gray-900 px-2.5 py-1 text-[11px] font-medium text-gray-900 transition-colors hover:bg-gray-900 hover:text-white"
+            >
+              <Fingerprint className="w-3.5 h-3.5" aria-hidden />
+              Registrar digital
+            </button>
+          )}
         </div>
       </div>
     </motion.section>
-  );
-}
-
-type BadgeProps = {
-  icon: typeof Mail;
-  label: string;
-  tone?: "positive" | "muted";
-};
-
-function Badge({ icon: Icon, label, tone = "muted" }: BadgeProps) {
-  const styles =
-    tone === "positive"
-      ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-      : "bg-gray-50 text-gray-600 border-gray-200";
-
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${styles}`}
-    >
-      <Icon className="w-3.5 h-3.5" aria-hidden />
-      {label}
-    </span>
   );
 }

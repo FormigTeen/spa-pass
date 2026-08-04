@@ -27,10 +27,16 @@ export const OAUTH_FIREBASE = gql`
 
 /* ── core module (gq_example) ────────────────────────────────── */
 
+/**
+ * VTEX's own profile, through the ecom proxy — `core`'s `getProfile` only
+ * carries email and document, and the greeting needs a name.
+ */
 export const GET_PROFILE = gql`
   query GetProfile {
-    getProfile {
+    profile {
       email
+      firstName
+      lastName
       document
     }
   }

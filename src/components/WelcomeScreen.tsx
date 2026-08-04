@@ -4,6 +4,7 @@ import { LogOut } from "lucide-react";
 import { sessionAtom } from "../state/atoms";
 import { useSignOut } from "../hooks/useAuth";
 import { usePasskeyEnrolment } from "../hooks/usePasskeyEnrolment";
+import { useProfile } from "../hooks/useProfile";
 import { ProfileCard } from "./ProfileCard";
 import { PasskeyEnrolCard } from "./PasskeyEnrolCard";
 
@@ -11,10 +12,13 @@ export function WelcomeScreen() {
   const session = useAtomValue(sessionAtom);
   const signOut = useSignOut();
   const enrolment = usePasskeyEnrolment();
+  const { data: profile } = useProfile();
 
   if (!session) return null;
 
-  const name = session.email.split("@")[0];
+  // VTEX may hold no name for the account; greeting the local part of an
+  // email address reads worse than not naming them at all.
+  const name = profile?.firstName?.trim() || "cliente";
 
   return (
     <motion.div
