@@ -20,12 +20,14 @@ export type AttemptOutcome = "signed-in" | "no-credentials" | "failed";
 export type PasskeyGate = {
   status: PasskeyGateStatus;
   error: string;
+  /** Checks whether the account has any passkey registered server-side. */
+  hasPasskey: (email: string) => Promise<boolean>;
   /** Authenticate with an explicit WebAuthn prompt. */
   attempt: (email: string) => Promise<AttemptOutcome>;
 };
 
 export function useAutoPasskeyLogin(): PasskeyGate {
-  const { loginWithPasskey } = usePasskey();
+  const { loginWithPasskey, hasPasskey } = usePasskey();
   const queryClient = useQueryClient();
   const setSignedOut = useSetAtom(signedOutAtom);
 
@@ -74,5 +76,13 @@ export function useAutoPasskeyLogin(): PasskeyGate {
     [loginWithPasskey, finish],
   );
 
-  return { status, error, attempt };
+  const checkPasskey = useCallback(
+    (email: string) => {
+      if (!email || !supportsPasskey()) return Promise.resolve(false);
+      return hasPasskey(email);
+    },
+    [hasPasskey],
+  );
+
+  return { status, error, hasPasskey: checkPasskey, attempt };
 }
