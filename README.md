@@ -117,25 +117,23 @@ Gravar **esse** dado é seguro, e a diferença importa: ele só **esconde a
 oferta**, nunca autoriza um prompt. Errar custa um card que não apareceu, não
 uma tela do SO falhando.
 
-**Sair** — ⚠️ **incompleto, e não dá para resolver no cliente.** Verificado
-contra o gateway: o cookie de sessão volta como
+**Sair** — a mutation `signOut` do módulo `globals` expira os cookies
+`VtexIdclientAutCookie*` do lado do servidor.
+
+Tem que ser no servidor. O cookie volta como
 
 ```
 VtexIdclientAutCookie_lebiscuit   domain=api-gateway.cvlb.tech   httpOnly=true
 ```
 
-`httpOnly` já tira ele do alcance do `document.cookie`, e mesmo sem isso uma
-página só escreve cookie para o próprio host ou para um domínio **pai** — nunca
-para um **irmão** como `api-gateway.cvlb.tech`. Vale em produção também.
+`httpOnly` o tira do alcance do `document.cookie`, e mesmo sem isso uma página
+só escreve cookie para o próprio host ou para um domínio **pai** — nunca para um
+**irmão** como `api-gateway.cvlb.tech`. Testado também sombrear com um cookie de
+mesmo nome em `.cvlb.tech`: o host-only vem primeiro no header e vence. Só quem
+escreveu o cookie consegue retirá-lo.
 
-Sair também encerra a sessão do **Firebase** (`signOut`), que vive em IndexedDB
-e sobreviveria ao logout, deixando `auth.currentUser` para o próximo visitante
-do aparelho.
-
-Hoje o "Sair" derruba a sessão VTEX só no cliente (`signedOutAtom`): a UI volta
-para o login, mas **o cookie continua válido** e um reload restaura a sessão.
-Para logout de verdade o gateway precisa expirar o cookie (mutation/endpoint
-respondendo `Set-Cookie: ...; Max-Age=0`).
+Sair encerra junto a sessão do **Firebase**, que vive em IndexedDB e
+sobreviveria ao logout deixando `auth.currentUser` para o próximo visitante.
 
 ## Onde plugar o agente
 

@@ -1,10 +1,11 @@
 import { useCallback, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { ecom } from "../lib/gateway";
+import { core, ecom } from "../lib/gateway";
 import {
   ACCESS_KEY_SIGN_IN,
   SEND_EMAIL_VERIFICATION,
+  SIGN_OUT,
 } from "../graphql/operations";
 import {
   chatMessagesAtom,
@@ -104,12 +105,15 @@ export function useSignOut() {
   const lastEmail = useAtomValue(lastEmailAtom);
 
   return useCallback(() => {
-    // Sign out is the auth cookie going away. On localhost the cookie belongs
-    // to another origin and is out of reach, so `signedOut` guarantees the tab
-    // drops the session either way.
-    clearAuthCookies();
+    // Only the gateway can end the session: its cookie is httpOnly and
+    // host-only on its own domain, so neither script nor a page on a sibling
+    // host can touch it. `signOut` expires it server-side.
+    void core(SIGN_OUT).catch(() => undefined);
     // Firebase holds a session of its own, in IndexedDB rather than a cookie.
     void signOutFirebase();
+    // Local belt and braces: any first-party, non-httpOnly auth cookie, and a
+    // flag so the tab drops the session without waiting for the round trip.
+    clearAuthCookies();
     setSignedOut(true);
     setSession(null);
     setLoginStep("email");

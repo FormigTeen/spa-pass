@@ -28,6 +28,17 @@ export const OAUTH_FIREBASE = gql`
 /* ── core module (gq_example) ────────────────────────────────── */
 
 /**
+ * Expires the gateway's auth cookies. The only way to end the session: the
+ * cookie is httpOnly and host-only on the gateway's domain, so nothing in the
+ * browser can reach it.
+ */
+export const SIGN_OUT = gql`
+  mutation SignOut {
+    signOut
+  }
+`;
+
+/**
  * VTEX's own profile, through the ecom proxy — `core`'s `getProfile` only
  * carries email and document, and the greeting needs a name.
  */
