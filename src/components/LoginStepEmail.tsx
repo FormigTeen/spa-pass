@@ -8,7 +8,7 @@ import {
 } from "react";
 import { motion } from "framer-motion";
 import { useAtom } from "jotai";
-import { Loader2 } from "lucide-react";
+import { KeyRound, Loader2 } from "lucide-react";
 import { draftEmailAtom, loginStepAtom } from "../state/atoms";
 import { useEmailCodeAuth } from "../hooks/useAuth";
 import { gatewayErrorMessage } from "../lib/gateway";
@@ -29,12 +29,12 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
   const [, setStep] = useAtom(loginStepAtom);
   const [focused, setFocused] = useState(false);
   const [error, setError] = useState("");
+  const [authenticating, setAuthenticating] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { requestCode } = useEmailCodeAuth();
-  const { cancelAutofill, startAutofill } = gate;
 
   const isValid = EMAIL_PATTERN.test(email);
-  const busy = requestCode.isPending;
+  const busy = authenticating || requestCode.isPending;
 
   const handleAutofill = useCallback(
     (value: string) => {
@@ -58,29 +58,12 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (!isValid) {
-      cancelAutofill();
-      return;
-    }
-
-    const timeout = window.setTimeout(() => {
-      void startAutofill(email);
-    }, 350);
-
-    return () => {
-      window.clearTimeout(timeout);
-      cancelAutofill();
-    };
-  }, [cancelAutofill, email, isValid, startAutofill]);
-
   const handleBlur = () => setFocused(false);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!isValid || busy) return;
     setError("");
-    cancelAutofill();
 
     try {
       await requestCode.mutateAsync(email);
@@ -88,6 +71,15 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
     } catch (caught) {
       setError(codeRequestMessage(caught));
     }
+  };
+
+  const handlePasskey = async () => {
+    if (!isValid || busy) return;
+    setError("");
+
+    setAuthenticating(true);
+    await gate.attempt(email);
+    setAuthenticating(false);
   };
 
   return (
@@ -151,10 +143,31 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
               : "bg-cream/10 text-cream/35",
           )}
         >
-          {busy && <Loader2 className="w-4 h-4 animate-spin" aria-hidden />}
-          {requestCode.isPending
-              ? "Enviando código..."
-              : "Continuar"}
+          {requestCode.isPending && (
+            <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+          )}
+          {requestCode.isPending ? "Enviando código..." : "Receber código"}
+        </motion.button>
+
+        <motion.button
+          type="button"
+          disabled={!isValid || busy}
+          onClick={handlePasskey}
+          whileTap={isValid ? { scale: 0.98 } : undefined}
+          className={cn(
+            "mt-3 w-full py-4 px-6 rounded-xl text-base font-medium",
+            "flex items-center justify-center gap-2 border transition-all duration-300",
+            isValid && !busy
+              ? "border-cream/40 text-cream hover:border-cream hover:bg-cream/10"
+              : "border-cream/10 text-cream/30",
+          )}
+        >
+          {authenticating ? (
+            <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
+          ) : (
+            <KeyRound className="w-4 h-4" aria-hidden />
+          )}
+          {authenticating ? "Verificando chave..." : "Usar chave deste dispositivo"}
         </motion.button>
       </form>
 
