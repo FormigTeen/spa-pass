@@ -31,21 +31,28 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
     if (!email && lastEmail) setEmail(lastEmail);
   }, [email, lastEmail, setEmail]);
 
-  const isValid = EMAIL_PATTERN.test(email);
-  const offerPasskey = gate.hasKey && gate.checkedEmail === email;
+  // Arm the autofill offer from here: the browser needs this input present for
+  // the whole call, and only this component can promise that.
+  useEffect(() => {
+    if (lastEmail) gate.startConditional(lastEmail);
+    // Once per mount of the form.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastEmail]);
 
-  /**
-   * An autofilled email is a deliberate pick from the browser's dropdown, so
-   * it is a fair trigger for the biometric prompt — the gate still confirms
-   * with the gateway before anything pops up.
-   */
+  const isValid = EMAIL_PATTERN.test(email);
+  // Whether a key exists is no longer knowable from here — login options carry
+  // no credential list — so the offer stands on any valid address and the
+  // browser decides what it can actually do with it.
+  const offerPasskey = isValid;
+
+  // Autofill only fills. Conditional mediation already offers the passkey in
+  // the same dropdown, so raising a sheet on top of it would compete with it.
   const handleAutofill = useCallback(
     (value: string) => {
       if (!value || value === email) return;
       setEmail(value);
-      if (EMAIL_PATTERN.test(value)) gate.attempt(value);
     },
-    [email, setEmail, gate],
+    [email, setEmail],
   );
 
   const handleAnimationStart = (event: AnimationEvent<HTMLInputElement>) => {
@@ -62,12 +69,7 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Typed by hand: check quietly so the biometric button can appear, but do
-  // not hijack the flow with a prompt the user did not ask for.
-  const handleBlur = () => {
-    setFocused(false);
-    if (isValid && email !== gate.checkedEmail) gate.probe(email);
-  };
+  const handleBlur = () => setFocused(false);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -152,7 +154,7 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
       {offerPasskey && (
         <motion.button
           type="button"
-          onClick={gate.retry}
+          onClick={() => gate.attempt(email)}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className="mt-4 w-full py-4 px-6 rounded-xl border-2 border-cream/20 text-cream font-medium flex items-center justify-center gap-2 hover:border-cream transition-colors"

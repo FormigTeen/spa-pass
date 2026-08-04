@@ -32,7 +32,7 @@ export function usePasskeyEnrolment() {
   const session = useAtomValue(sessionAtom);
   const { data: profile, isFetched } = useProfile();
   const [dismissed, setDismissed] = useAtom(enrolDismissedAtom);
-  const { hasPasskey, enrolPasskey } = usePasskey();
+  const { enrolPasskey } = usePasskey();
 
   const [status, setStatus] = useState<EnrolmentStatus>("checking");
   const [error, setError] = useState("");
@@ -87,19 +87,12 @@ export function usePasskeyEnrolment() {
 
     started.current = true;
 
-    // Only the gateway is consulted. Whether *this* device holds a key is
-    // unknowable, so the proactive ask is limited to accounts with no key at
-    // all; every other device reaches enrolment through the profile card.
-    void (async () => {
-      setStatus("checking");
-      const accountHasKey = await hasPasskey(email);
-      if (accountHasKey) {
-        setStatus("enrolled");
-        return;
-      }
-      setStatus(dismissed.includes(email) ? "dismissed" : "offer");
-    })();
-  }, [session, isFetched, canEnrol, dismissed, email, hasPasskey]);
+    // Nothing left to ask: login options carry no credential list, and no API
+    // reports what this device holds. Offer, and let the attempt itself settle
+    // it — a key the device can already reach is refused via
+    // `excludeCredentials`, which `enrol` reads as "already enrolled".
+    setStatus(dismissed.includes(email) ? "dismissed" : "offer");
+  }, [session, isFetched, canEnrol, dismissed, email]);
 
   return { status, error, enrol, dismiss, canEnrol };
 }

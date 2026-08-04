@@ -56,20 +56,6 @@ export function usePasskey() {
     return data.passkeyLoginOptions ?? null;
   }, []);
 
-  const hasPasskey = useCallback(
-    async (email: string) => {
-      if (!email || !supportsPasskey()) return false;
-      try {
-        const options = await loginOptions(email);
-        return Boolean(options?.allowCredentials?.length);
-      } catch {
-        // Unknown email, or the gateway has no credentials for it.
-        return false;
-      }
-    },
-    [loginOptions],
-  );
-
   const loginWithPasskey = useCallback(
     async (email: string, preloaded?: AuthOptions | null): Promise<PasskeyToken> => {
       // Reuse the options from the "has a key?" probe so the challenge the
@@ -105,8 +91,11 @@ export function usePasskey() {
     async (email: string): Promise<PasskeyToken | null> => {
       if (!(await browserSupportsWebAuthnAutofill().catch(() => false))) return null;
 
+      // Options no longer list credentials — the authenticator resolves the
+      // account from its own discoverable ones — so there is nothing to check
+      // here beyond having options at all.
       const optionsJSON = await loginOptions(email).catch(() => null);
-      if (!optionsJSON?.allowCredentials?.length) return null;
+      if (!optionsJSON) return null;
 
       const key = await startAuthentication({
         optionsJSON: optionsJSON as never,
@@ -143,7 +132,6 @@ export function usePasskey() {
   }, []);
 
   return {
-    hasPasskey,
     loginWithPasskey,
     conditionalLogin,
     enrolPasskey,

@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useAtomValue } from "jotai";
 import { useQueryClient } from "@tanstack/react-query";
-import { lastEmailAtom, sessionAtom, signedOutAtom } from "../state/atoms";
+import { lastEmailAtom } from "../state/atoms";
 import {
   isUserCancellation,
   passkeyErrorMessage,
@@ -10,7 +10,7 @@ import {
   type PasskeyToken,
 } from "./usePasskey";
 import { completeVtexFirebaseSession } from "../lib/vtexFirebaseSession";
-import { profileQueryKey, useProfile } from "./useProfile";
+import { profileQueryKey } from "./useProfile";
 
 export type PasskeyGateStatus =
   | "idle" // nothing on screen — a silent autofill offer may be pending
@@ -22,14 +22,14 @@ export type PasskeyGate = {
   status: PasskeyGateStatus;
   email: string;
   error: string;
-  /** The gateway confirmed the *account* owns a credential. */
-  hasKey: boolean;
-  /** The email `hasKey` refers to. */
-  checkedEmail: string;
   /** Explicit request: raise the OS sheet now. */
   attempt: (email: string) => void;
-  /** Ask the gateway whether the account has a key, without prompting. */
-  probe: (email: string) => void;
+  /**
+   * Arm the autofill offer. Called by the component that owns the email input,
+   * because the browser requires that input to be in the DOM for the whole
+   * call — starting this from a parent races the form being swapped out.
+   */
+  startConditional: (email: string) => void;
   retry: () => void;
   skip: () => void;
 };
@@ -50,20 +50,11 @@ export type PasskeyGate = {
  */
 export function useAutoPasskeyLogin(): PasskeyGate {
   const lastEmail = useAtomValue(lastEmailAtom);
-  const session = useAtomValue(sessionAtom);
-  const signedOut = useAtomValue(signedOutAtom);
-  const { loginOptions, loginWithPasskey, conditionalLogin } = usePasskey();
+  const { loginWithPasskey, conditionalLogin } = usePasskey();
   const queryClient = useQueryClient();
-
-  // Wait for the cookie check: someone already signed in needs no passkey.
-  const { isFetched: profileChecked } = useProfile();
 
   const [status, setStatus] = useState<PasskeyGateStatus>("idle");
   const [error, setError] = useState("");
-  const [checkedEmail, setCheckedEmail] = useState("");
-  const [hasKey, setHasKey] = useState(false);
-
-  const probed = useRef(new Map<string, boolean>());
   const conditionalStarted = useRef(false);
 
   /** Everything after the passkey itself: Firebase, then the VTEX session. */
@@ -75,34 +66,6 @@ export function useAutoPasskeyLogin(): PasskeyGate {
       setStatus("idle");
     },
     [queryClient],
-  );
-
-  const probe = useCallback(
-    async (email: string): Promise<boolean> => {
-      if (!email || !supportsPasskey()) return false;
-
-      const cached = probed.current.get(email);
-      if (cached !== undefined) {
-        setCheckedEmail(email);
-        setHasKey(cached);
-        return cached;
-      }
-
-      try {
-        const options = await loginOptions(email);
-        const owns = Boolean(options?.allowCredentials?.length);
-        probed.current.set(email, owns);
-        setCheckedEmail(email);
-        setHasKey(owns);
-        return owns;
-      } catch {
-        probed.current.set(email, false);
-        setCheckedEmail(email);
-        setHasKey(false);
-        return false;
-      }
-    },
-    [loginOptions],
   );
 
   /** Modal sheet. Only ever reached because the user asked for it. */
@@ -122,44 +85,30 @@ export function useAutoPasskeyLogin(): PasskeyGate {
     [loginWithPasskey, finish],
   );
 
-  // Silent autofill offer for the remembered email. It never raises a sheet on
-  // its own, so there is nothing to gate it on and nothing to remember.
-  useEffect(() => {
-    if (conditionalStarted.current) return;
-    if (!profileChecked || session || signedOut) return;
-    if (!lastEmail || !supportsPasskey()) return;
+  const startConditional = useCallback(
+    async (email: string) => {
+      if (conditionalStarted.current) return;
+      if (!email || !supportsPasskey()) return;
+      conditionalStarted.current = true;
 
-    conditionalStarted.current = true;
-
-    void (async () => {
-      void probe(lastEmail);
       try {
-        const token = await conditionalLogin(lastEmail);
+        const token = await conditionalLogin(email);
         if (token) await finish(token);
       } catch (caught) {
         // Aborted by another WebAuthn call, or simply never picked.
         if (!isUserCancellation(caught)) setError(passkeyErrorMessage(caught));
       }
-    })();
-  }, [
-    profileChecked,
-    session,
-    signedOut,
-    lastEmail,
-    conditionalLogin,
-    probe,
-    finish,
-  ]);
+    },
+    [conditionalLogin, finish],
+  );
 
   return {
     status,
     email: lastEmail,
     error,
-    hasKey,
-    checkedEmail,
     attempt: (email) => void attempt(email),
-    probe: (email) => void probe(email),
-    retry: () => void attempt(checkedEmail || lastEmail),
+    startConditional: (email) => void startConditional(email),
+    retry: () => void attempt(lastEmail),
     skip: () => setStatus("idle"),
   };
 }
