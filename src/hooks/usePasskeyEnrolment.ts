@@ -37,7 +37,7 @@ export function usePasskeyEnrolment() {
   const { data: profile, isFetched } = useProfile();
   const [dismissed, setDismissed] = useAtom(enrolDismissedAtom);
   const [deviceEnrolled, setDeviceEnrolled] = useAtom(deviceEnrolledAtom);
-  const { enrolPasskey } = usePasskey();
+  const { enrolPasskey, registerOptions } = usePasskey();
 
   const [status, setStatus] = useState<EnrolmentStatus>("checking");
   const [error, setError] = useState("");
@@ -100,15 +100,25 @@ export function usePasskeyEnrolment() {
 
     started.current = true;
 
-    // Only what this device has learned about itself. The gateway cannot help:
-    // login options carry no credential list, and it answers for the account,
-    // not the device.
+    // Local hint first so the card does not flash for a device that already
+    // knows, then the authoritative answer.
     if (deviceEnrolled.includes(email)) {
       setStatus("enrolled");
       return;
     }
-    setStatus(dismissed.includes(email) ? "dismissed" : "offer");
-  }, [session, isFetched, canEnrol, dismissed, deviceEnrolled, email]);
+
+    void (async () => {
+      setStatus("checking");
+      const options = await registerOptions().catch(() => null);
+
+      // The account already has a key somewhere: never offer to create another.
+      if ((options?.excludeCredentials?.length ?? 0) > 0) {
+        setStatus("enrolled");
+        return;
+      }
+      setStatus(dismissed.includes(email) ? "dismissed" : "offer");
+    })();
+  }, [session, isFetched, canEnrol, dismissed, deviceEnrolled, email, registerOptions]);
 
   return { status, error, enrol, dismiss, canEnrol };
 }

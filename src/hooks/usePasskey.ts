@@ -18,6 +18,8 @@ export type PasskeyToken = { email: string; token: string };
 
 type AuthOptions = { allowCredentials?: unknown[] } & Record<string, unknown>;
 
+type RegisterOptions = { excludeCredentials?: unknown[] } & Record<string, unknown>;
+
 /** The user dismissed the OS sheet — not an error worth shouting about. */
 export const isUserCancellation = (error: unknown) =>
   error instanceof Error &&
@@ -111,12 +113,23 @@ export function usePasskey() {
     [loginOptions],
   );
 
-  /** Requires the gateway session cookie — enrolment is bound to the logged in user. */
-  const enrolPasskey = useCallback(async () => {
-    const optionsData = await core<{ passkeyRegisterOptions: object }>(
-      PASSKEY_REGISTER_OPTIONS,
-    );
-    const optionsJSON = optionsData.passkeyRegisterOptions;
+  /**
+   * Requires the gateway session cookie — enrolment is bound to the logged in
+   * user. `excludeCredentials` lists the account's existing keys, which is the
+   * only remaining way to ask "does this account have any?": login options
+   * deliberately carry no credential list. Asking here is safe because it is
+   * authenticated and about the caller's own account.
+   */
+  const registerOptions = useCallback(
+    () =>
+      core<{ passkeyRegisterOptions: RegisterOptions }>(
+        PASSKEY_REGISTER_OPTIONS,
+      ).then((data) => data.passkeyRegisterOptions ?? null),
+    [],
+  );
+
+  const enrolPasskey = useCallback(async (preloaded?: RegisterOptions | null) => {
+    const optionsJSON = preloaded ?? (await registerOptions());
     if (!optionsJSON) throw new Error("Não foi possível iniciar o registro da chave.");
 
     // Passed through untouched: the gateway already asks for the platform
@@ -129,10 +142,11 @@ export function usePasskey() {
     if (data.passkeyRegister !== true)
       throw new Error("O servidor recusou o registro da chave.");
     return true;
-  }, []);
+  }, [registerOptions]);
 
   return {
     loginWithPasskey,
+    registerOptions,
     conditionalLogin,
     enrolPasskey,
     loginOptions,
