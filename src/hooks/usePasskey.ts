@@ -5,6 +5,7 @@ import {
   platformAuthenticatorIsAvailable,
   startAuthentication,
   startRegistration,
+  WebAuthnAbortService,
 } from "@simplewebauthn/browser";
 import { core, gatewayErrorMessage } from "../lib/gateway";
 import {
@@ -45,6 +46,39 @@ export const passkeyErrorMessage = (error: unknown) => {
 
 export const supportsPasskey = () => browserSupportsWebAuthn();
 
+/**
+ * How long the silent check may take before the login form gives up on it.
+ *
+ * An authenticator that holds no matching credential normally rejects at once,
+ * but nothing guarantees it: the request otherwise runs to the server's 60s
+ * timeout, leaving someone staring at a button that looks stuck. The code is
+ * always waiting behind it, so a few seconds is a fair ceiling.
+ */
+const SILENT_CHECK_TIMEOUT = 4000;
+
+/**
+ * Restricts the request to credentials this device can serve on its own.
+ *
+ * `hybrid` is what makes a browser offer the QR sheet for a key living on
+ * another device. Dropping it turns the call into a silent check: the
+ * authenticator either holds a matching credential and prompts, or it matches
+ * nothing and fails at once, with no UI in between. That failure is the answer
+ * the login form is asking for, not an error.
+ */
+const localCredentialsOnly = (options: AuthOptions): AuthOptions => {
+  if (!Array.isArray(options.allowCredentials)) return options;
+
+  return {
+    ...options,
+    allowCredentials: options.allowCredentials.map((credential) => {
+      const item = credential as { transports?: string[] };
+      if (!Array.isArray(item.transports)) return credential;
+      const transports = item.transports.filter((one) => one === "internal");
+      return { ...item, transports };
+    }),
+  };
+};
+
 export const supportsPlatformAuthenticator = () =>
   platformAuthenticatorIsAvailable().catch(() => false);
 
@@ -59,15 +93,39 @@ export function usePasskey() {
   }, []);
 
   const loginWithPasskey = useCallback(
-    async (email: string, preloaded?: AuthOptions | null): Promise<PasskeyToken> => {
+    async (
+      email: string,
+      preloaded?: AuthOptions | null,
+      localOnly = false,
+    ): Promise<PasskeyToken> => {
       // Reuse the options from the "has a key?" probe so the challenge the
       // authenticator signs is the one the gateway is still holding.
       const optionsJSON = preloaded ?? (await loginOptions(email));
       if (!optionsJSON) throw new Error("Nenhuma chave de acesso disponível.");
 
-      const key = await startAuthentication({
-        optionsJSON: optionsJSON as never,
+      const ceremony = startAuthentication({
+        optionsJSON: (localOnly
+          ? localCredentialsOnly(optionsJSON)
+          : optionsJSON) as never,
       });
+
+      // The silent check must not outlast the patience of someone who just
+      // pressed a button, so it is capped and the ceremony cancelled.
+      const key = localOnly
+        ? await Promise.race([
+            ceremony,
+            new Promise<never>((_, reject) =>
+              setTimeout(() => {
+                WebAuthnAbortService.cancelCeremony();
+                reject(
+                  Object.assign(new Error("Nenhuma chave neste dispositivo."), {
+                    name: "NotAllowedError",
+                  }),
+                );
+              }, SILENT_CHECK_TIMEOUT),
+            ),
+          ])
+        : await ceremony;
 
       const data = await core<{ passkeyLogin: PasskeyToken }>(PASSKEY_LOGIN, {
         email,

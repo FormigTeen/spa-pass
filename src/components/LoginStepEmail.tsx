@@ -23,6 +23,7 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
   const [, setStep] = useAtom(loginStepAtom);
   const [focused, setFocused] = useState(false);
   const [error, setError] = useState("");
+  const [tryingPasskey, setTryingPasskey] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { requestCode } = useEmailCodeAuth();
 
@@ -31,17 +32,8 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
     if (!email && lastEmail) setEmail(lastEmail);
   }, [email, lastEmail, setEmail]);
 
-  // Arm the autofill offer from here: the browser needs this input present for
-  // the whole call, and only this component can promise that. Re-armed when the
-  // address changes, so the offer always belongs to the email on screen.
-  useEffect(() => {
-    const target = EMAIL_PATTERN.test(email) ? email : lastEmail;
-    if (target) gate.startConditional(target);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [email, lastEmail]);
-
   const isValid = EMAIL_PATTERN.test(email);
-  const busy = requestCode.isPending;
+  const busy = tryingPasskey || requestCode.isPending;
 
   // Autofill only fills. Conditional mediation already offers the passkey in
   // the same dropdown, so raising a sheet on top of it would compete with it.
@@ -70,19 +62,22 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
   const handleBlur = () => setFocused(false);
 
   /**
-   * Straight to the emailed code. The passkey never goes through this button.
+   * The key first, the code as the fallback.
    *
-   * A modal prompt would offer every credential this device holds for the
-   * relying party — login options carry no credential list any more, by design
-   * — so someone typing an address with no key gets shown a different
-   * account's, picks it, and the server rightly refuses. Conditional mediation
-   * has already made its silent offer on load, where the browser matches the
-   * credential itself and shows nothing when there is none.
+   * The attempt is scoped to this address and to credentials this device can
+   * serve, so it costs nothing when there is no key: the authenticator matches
+   * nothing and returns immediately, without a sheet. Only a device that
+   * really holds the key sees a prompt.
    */
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!isValid || busy) return;
     setError("");
+
+    setTryingPasskey(true);
+    const signedIn = await gate.attempt(email);
+    setTryingPasskey(false);
+    if (signedIn) return;
 
     try {
       await requestCode.mutateAsync(email);
@@ -154,7 +149,11 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
           )}
         >
           {busy && <Loader2 className="w-4 h-4 animate-spin" aria-hidden />}
-          {busy ? "Enviando código..." : "Continuar"}
+          {tryingPasskey
+            ? "Verificando..."
+            : requestCode.isPending
+              ? "Enviando código..."
+              : "Continuar"}
         </motion.button>
       </form>
 

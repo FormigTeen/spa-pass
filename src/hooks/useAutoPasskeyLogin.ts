@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
 import { deviceEnrolledAtom, lastEmailAtom } from "../state/atoms";
 import {
@@ -28,39 +28,28 @@ export type PasskeyGate = {
    * decides what to fall back to.
    */
   attempt: (email: string) => Promise<boolean>;
-  /**
-   * Arm the autofill offer. Called by the component that owns the email input,
-   * because the browser requires that input to be in the DOM for the whole
-   * call — starting this from a parent races the form being swapped out.
-   */
-  startConditional: (email: string) => void;
   retry: () => void;
   skip: () => void;
 };
 
 /**
- * Returning users sign in with a passkey without asking for it — but only
- * through **conditional mediation**, where the browser puts the passkey in the
- * email field's autofill list and shows it *only if it actually holds one*.
+ * The passkey attempt behind Continue.
  *
- * Nothing here records which devices have keys, deliberately. WebAuthn offers
- * no way to ask "does this device hold credential X" — enumerating credentials
- * would be a fingerprinting vector — so any such record is a guess. Guessing
- * wrong is exactly what produced an unprompted "no passkey available": the
- * gateway answers for the *account*, and a phone may hold nothing while the
- * account's key sits on a laptop. Conditional mediation hands that judgement
- * to the only party able to make it, and it cannot fail loudly: with no
- * matching credential, nothing appears at all.
+ * Nothing here guesses which devices hold keys. WebAuthn offers no way to ask
+ * "does this device hold credential X" — enumerating credentials would be a
+ * fingerprinting vector — so the question is put to the authenticator itself,
+ * scoped to the address on screen and to credentials the device can serve. It
+ * answers by prompting or by refusing at once, and a refusal simply routes to
+ * the emailed code.
  */
 export function useAutoPasskeyLogin(): PasskeyGate {
   const lastEmail = useAtomValue(lastEmailAtom);
-  const { loginWithPasskey, conditionalLogin } = usePasskey();
+  const { loginWithPasskey } = usePasskey();
   const queryClient = useQueryClient();
   const setDeviceEnrolled = useSetAtom(deviceEnrolledAtom);
 
   const [status, setStatus] = useState<PasskeyGateStatus>("idle");
   const [error, setError] = useState("");
-  const conditionalStarted = useRef<string | null>(null);
 
   /**
    * Everything after the passkey itself: Firebase, then the VTEX session. It
@@ -83,44 +72,29 @@ export function useAutoPasskeyLogin(): PasskeyGate {
     [queryClient, setDeviceEnrolled],
   );
 
-  /** Modal sheet. Only ever reached because the user asked for it. */
+  /**
+   * The silent check behind Continue: restricted to credentials this device
+   * holds, so it either prompts or fails at once. False means "no key here",
+   * which is a route rather than a failure.
+   */
   const attempt = useCallback(
     async (email: string): Promise<boolean> => {
       if (!email || !supportsPasskey()) return false;
       setStatus("prompting");
       setError("");
       try {
-        const token = await loginWithPasskey(email);
+        const token = await loginWithPasskey(email, null, true);
         await finish(token);
         return true;
       } catch (caught) {
-        // Not surfaced as an error: the caller falls back to the code, and a
-        // passkey that was never going to work should not read as a failure.
         setStatus("idle");
-        if (!isUserCancellation(caught)) setError("");
+        // "No key here" is a route, not a failure — the code is waiting behind
+        // it. Only a break in the session hand-off is worth showing.
+        setError(isUserCancellation(caught) ? "" : passkeyErrorMessage(caught));
         return false;
       }
     },
     [loginWithPasskey, finish],
-  );
-
-  const startConditional = useCallback(
-    async (email: string) => {
-      if (!email || !supportsPasskey()) return;
-      // Re-arming for a different address is the point: the offer must belong
-      // to the email on screen. The library aborts the pending call for us.
-      if (conditionalStarted.current === email) return;
-      conditionalStarted.current = email;
-
-      try {
-        const token = await conditionalLogin(email);
-        if (token) await finish(token);
-      } catch (caught) {
-        // Aborted by another WebAuthn call, or simply never picked.
-        if (!isUserCancellation(caught)) setError(passkeyErrorMessage(caught));
-      }
-    },
-    [conditionalLogin, finish],
   );
 
   return {
@@ -128,7 +102,6 @@ export function useAutoPasskeyLogin(): PasskeyGate {
     email: lastEmail,
     error,
     attempt,
-    startConditional: (email) => void startConditional(email),
     retry: () => void attempt(lastEmail),
     skip: () => setStatus("idle"),
   };
