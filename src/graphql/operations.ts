@@ -14,18 +14,21 @@ export const ACCESS_KEY_SIGN_IN = gql`
   }
 `;
 
+/* ── core module (gq_example) ────────────────────────────────── */
+
 /**
- * VTEX's own OAuth mutation, reached through the ecom proxy. Sent with the
- * header `X-Firebase-Authorization: Bearer <idToken>`; the response is the
- * VTEX ID redirect that finishes the login and sets the session cookies.
+ * The **core** module's own OAuth mutation, not VTEX's `oAuth` on the ecom
+ * proxy. It resolves `accountName` from the gateway's provider, so the token
+ * that comes back belongs to `lebiscuit`; the ecom one resolves elsewhere and
+ * issues a token for the `vtex` account, which the gateway then rejects.
+ *
+ * Sent with `X-Firebase-Authorization: Bearer <idToken>`.
  */
 export const OAUTH_FIREBASE = gql`
   mutation OAuthFirebase {
-    oAuth(provider: "Firebase")
+    ecomOAuth(provider: "Firebase")
   }
 `;
-
-/* ── core module (gq_example) ────────────────────────────────── */
 
 /**
  * Expires the gateway's auth cookies. The only way to end the session: the

@@ -28,8 +28,16 @@ export const ecomClient = client("ecom");
 /** `/gql/v1/core` — profile and passkey (gq_example). */
 export const coreClient = client("core");
 
-export const core = <T>(document: string, variables?: object) =>
-  coreClient.request<T>(document, variables);
+export const core = <T>(
+  document: string,
+  variables?: object,
+  requestHeaders?: Record<string, string>,
+) =>
+  coreClient.request<T>({
+    document,
+    variables: variables as never,
+    requestHeaders,
+  });
 
 export const ecom = <T>(
   document: string,

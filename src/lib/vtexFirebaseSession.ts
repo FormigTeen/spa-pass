@@ -1,4 +1,4 @@
-import { ecom } from "./gateway";
+import { core } from "./gateway";
 import { OAUTH_FIREBASE } from "../graphql/operations";
 import { exchangeCustomTokenForIdToken } from "./firebase";
 import { applySessionCookies } from "./session";
@@ -7,7 +7,7 @@ import { applySessionCookies } from "./session";
  * Turns the passkey login's Firebase custom token into a real VTEX session.
  *
  *   custom token ──▶ Firebase sign in ──▶ ID token
- *                ──▶ oAuth(provider: "Firebase")  → VTEX ID URL
+ *                ──▶ ecomOAuth(provider: "Firebase")  → VTEX ID URL
  *                ──▶ follow it with the same header → cookies, as JSON
  *                ──▶ written onto .cvlb.tech so the gateway receives them
  *
@@ -23,13 +23,14 @@ export async function completeVtexFirebaseSession(customToken: string) {
   const idToken = await exchangeCustomTokenForIdToken(customToken);
   const authorization = `Bearer ${idToken}`;
 
-  const data = await ecom<{ oAuth: string }>(OAUTH_FIREBASE, undefined, {
+  const data = await core<{ ecomOAuth: string }>(OAUTH_FIREBASE, undefined, {
     "X-Firebase-Authorization": authorization,
   });
-  if (!data.oAuth) throw new Error("A VTEX não devolveu a URL de autenticação.");
+  if (!data.ecomOAuth)
+    throw new Error("A VTEX não devolveu a URL de autenticação.");
 
   // Dropping to http mid-login would lose the Secure session cookies.
-  const url = data.oAuth.replace(/^http:\/\//, "https://");
+  const url = data.ecomOAuth.replace(/^http:\/\//, "https://");
 
   // `fetch` follows the redirect chain and keeps the header across it. The
   // origin becomes `null` on a cross-origin hop, and every host in the chain
