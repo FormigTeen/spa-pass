@@ -4,6 +4,7 @@ import {
   platformAuthenticatorIsAvailable,
   startAuthentication,
   startRegistration,
+  WebAuthnAbortService,
 } from "@simplewebauthn/browser";
 import { core, gatewayErrorMessage } from "../lib/gateway";
 import { ensureStorageAccess, isStorageAccessError } from "../lib/storageAccess";
@@ -94,6 +95,25 @@ export function usePasskey() {
     [loginOptions],
   );
 
+  const loginWithPasskeyAutofill = useCallback(
+    async (email: string): Promise<PasskeyToken> => {
+      const optionsJSON = await loginOptions(email);
+
+      const key = await startAuthentication({
+        optionsJSON: optionsJSON as never,
+        useBrowserAutofill: true,
+      });
+
+      const data = await core<{ passkeyLogin: PasskeyToken }>(PASSKEY_LOGIN, {
+        email,
+        key,
+      });
+      if (!data.passkeyLogin) throw new Error("Falha ao validar a chave de acesso.");
+      return data.passkeyLogin;
+    },
+    [loginOptions],
+  );
+
   /** Requires the gateway session cookie: enrolment is bound to the signed in user. */
   const registerOptions = useCallback(
     () =>
@@ -119,10 +139,16 @@ export function usePasskey() {
     return true;
   }, [registerOptions]);
 
+  const cancelPasskey = useCallback(() => {
+    WebAuthnAbortService.cancelCeremony();
+  }, []);
+
   return {
     loginOptions,
     hasPasskey,
     loginWithPasskey,
+    loginWithPasskeyAutofill,
+    cancelPasskey,
     registerOptions,
     enrolPasskey,
   };

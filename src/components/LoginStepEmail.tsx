@@ -29,12 +29,12 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
   const [, setStep] = useAtom(loginStepAtom);
   const [focused, setFocused] = useState(false);
   const [error, setError] = useState("");
-  const [authenticating, setAuthenticating] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { requestCode } = useEmailCodeAuth();
+  const { cancelAutofill, startAutofill } = gate;
 
   const isValid = EMAIL_PATTERN.test(email);
-  const busy = authenticating || requestCode.isPending;
+  const busy = requestCode.isPending;
 
   const handleAutofill = useCallback(
     (value: string) => {
@@ -58,21 +58,29 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (!isValid) {
+      cancelAutofill();
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      void startAutofill(email);
+    }, 350);
+
+    return () => {
+      window.clearTimeout(timeout);
+      cancelAutofill();
+    };
+  }, [cancelAutofill, email, isValid, startAutofill]);
+
   const handleBlur = () => setFocused(false);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!isValid || busy) return;
     setError("");
-
-    setAuthenticating(true);
-    const outcome = await gate.attempt(email);
-    setAuthenticating(false);
-
-    if (outcome === "signed-in") return;
-    // Only an account without a key falls through to the code; a cancelled or
-    // failed prompt stays put so the message is not swept away.
-    if (outcome === "failed") return;
+    cancelAutofill();
 
     try {
       await requestCode.mutateAsync(email);
@@ -144,9 +152,7 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
           )}
         >
           {busy && <Loader2 className="w-4 h-4 animate-spin" aria-hidden />}
-          {authenticating
-            ? "Verificando..."
-            : requestCode.isPending
+          {requestCode.isPending
               ? "Enviando código..."
               : "Continuar"}
         </motion.button>

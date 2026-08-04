@@ -20,12 +20,16 @@ export type AttemptOutcome = "signed-in" | "no-credentials" | "failed";
 export type PasskeyGate = {
   status: PasskeyGateStatus;
   error: string;
-  /** Authenticate with the key registered for this address. */
+  /** Authenticate with an explicit WebAuthn prompt. */
   attempt: (email: string) => Promise<AttemptOutcome>;
+  /** Starts WebAuthn conditional UI so passkeys appear in browser autofill. */
+  startAutofill: (email: string) => Promise<void>;
+  cancelAutofill: () => void;
 };
 
 export function useAutoPasskeyLogin(): PasskeyGate {
-  const { loginWithPasskey } = usePasskey();
+  const { loginWithPasskey, loginWithPasskeyAutofill, cancelPasskey } =
+    usePasskey();
   const queryClient = useQueryClient();
   const setSignedOut = useSetAtom(signedOutAtom);
 
@@ -74,5 +78,39 @@ export function useAutoPasskeyLogin(): PasskeyGate {
     [loginWithPasskey, finish],
   );
 
-  return { status, error, attempt };
+  const startAutofill = useCallback(
+    async (email: string) => {
+      if (!email || !supportsPasskey()) return;
+
+      setStatus("prompting");
+      setError("");
+      try {
+        const token = await loginWithPasskeyAutofill(email);
+        await finish(token);
+      } catch (caught) {
+        setStatus("idle");
+
+        if (isNoCredentials(caught) || isUserCancellation(caught)) {
+          setError("");
+          return;
+        }
+
+        const message = passkeyErrorMessage(caught);
+        if (/autofill|conditional ui/i.test(message)) {
+          setError("");
+          return;
+        }
+
+        setError(message);
+      }
+    },
+    [loginWithPasskeyAutofill, finish],
+  );
+
+  const cancelAutofill = useCallback(() => {
+    cancelPasskey();
+    setStatus("idle");
+  }, [cancelPasskey]);
+
+  return { status, error, attempt, startAutofill, cancelAutofill };
 }
