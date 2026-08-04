@@ -27,13 +27,16 @@ body {
 }
 
 /**
- * `100vh` on mobile is the viewport with the browser chrome hidden, so a
- * full-height layout slides underneath the address and navigation bars —
- * which is how the sign-out button ended up behind the system buttons.
- * `dvh` tracks the chrome as it comes and goes.
+ * Full height of what is actually visible: `useViewportHeight` publishes the
+ * visual viewport, so the layout also follows the virtual keyboard. `dvh` is the
+ * fallback — it tracks the browser chrome, which `vh` does not.
  */
+@utility h-viewport {
+  height: var(--viewport-height, 100dvh);
+}
+
 #root {
-  height: 100dvh;
+  height: var(--viewport-height, 100dvh);
 }
 
 body {
@@ -65,11 +68,7 @@ input:-webkit-autofill {
   transition: background-color 600000s 0s;
 }
 
-/**
- * Browsers give `<button>` a default cursor, and Tailwind's preflight does not
- * change it. Anything pressable should say so under the pointer, so this
- * covers every control at once rather than one class at a time.
- */
+/* Anything pressable says so under the pointer; preflight leaves this alone. */
 button:not(:disabled),
 [role="button"]:not([aria-disabled="true"]) {
   cursor: pointer;

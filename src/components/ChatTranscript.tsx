@@ -4,17 +4,32 @@ import type { ChatMessage } from "../state/atoms";
 import { cn } from "../lib/cn";
 
 export function ChatTranscript({ messages }: { messages: ChatMessage[] }) {
-  const bottom = useRef<HTMLDivElement>(null);
+  const viewport = useRef<HTMLDivElement>(null);
 
+  // Follow the newest message by scrolling this element only. `scrollIntoView`
+  // walks up every scrollable ancestor, including the document, which on mobile
+  // moves the whole panel instead of the thread.
   useEffect(() => {
-    bottom.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    const node = viewport.current;
+    node?.scrollTo({ top: node.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
+  // The keyboard opening is not a message change, so re-pin on resize too.
+  useEffect(() => {
+    const node = viewport.current;
+    if (!node) return;
+
+    const observer = new ResizeObserver(() => {
+      node.scrollTop = node.scrollHeight;
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    // The inner column is at least full height and packs to the end, so a
-    // short thread sits on the bottom edge and grows upward the way a chat
-    // is expected to, instead of hanging from the top.
-    <div className="no-scrollbar h-full overflow-y-auto">
+    // The inner column is at least full height and packs to the end, so a short
+    // thread sits on the bottom edge and grows upward.
+    <div ref={viewport} className="no-scrollbar h-full overflow-y-auto">
       <div className="min-h-full flex flex-col justify-end py-6 space-y-4">
         <AnimatePresence initial={false}>
         {messages.map((message) => (
@@ -42,7 +57,6 @@ export function ChatTranscript({ messages }: { messages: ChatMessage[] }) {
           </motion.div>
         ))}
         </AnimatePresence>
-        <div ref={bottom} />
       </div>
     </div>
   );
