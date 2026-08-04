@@ -42,8 +42,7 @@ export function PasskeyGateScreen({ gate }: { gate: PasskeyGate }) {
           "Estamos abrindo sua sessão."
         ) : (
           <>
-            Use o desbloqueio deste dispositivo para entrar como{" "}
-            <span className="text-cream font-medium">{gate.email}</span>.
+            Use o desbloqueio deste dispositivo para entrar.
           </>
         )}
       </p>

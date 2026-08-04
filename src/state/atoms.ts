@@ -1,5 +1,4 @@
 import { atom } from "jotai";
-import { atomWithStorage } from "jotai/utils";
 
 /* ── session ─────────────────────────────────────────────────── */
 
@@ -32,16 +31,6 @@ export const loginStepAtom = atom<LoginStep>("email");
 
 /** Email currently being typed / verified. */
 export const draftEmailAtom = atom("");
-
-/* ── persisted preferences ───────────────────────────────────── */
-
-/** Last email that completed a sign in — prefills the form on return. */
-export const lastEmailAtom = atomWithStorage<string>(
-  "passkey-poc:last-email",
-  "",
-  undefined,
-  { getOnInit: true },
-);
 
 /** Emails that declined the enrolment offer, for this tab only. */
 export const enrolDismissedAtom = atom<string[]>([]);

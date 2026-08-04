@@ -10,7 +10,6 @@ import {
 import {
   chatMessagesAtom,
   draftEmailAtom,
-  lastEmailAtom,
   loginStepAtom,
   mobileChatOpenAtom,
   sessionAtom,
@@ -25,7 +24,6 @@ import { fetchProfile, profileQueryKey, useProfile } from "./useProfile";
 export function useEmailCodeAuth() {
   const queryClient = useQueryClient();
   const setSession = useSetAtom(sessionAtom);
-  const setLastEmail = useSetAtom(lastEmailAtom);
   const setSignedOut = useSetAtom(signedOutAtom);
 
   const requestCode = useMutation({
@@ -40,7 +38,6 @@ export function useEmailCodeAuth() {
       ecom<{ accessKeySignIn: unknown }>(ACCESS_KEY_SIGN_IN, input),
     onSuccess: async (_data, { email }) => {
       setSignedOut(false);
-      setLastEmail(email);
 
       // The cookie is set now; read the profile back for the user card.
       const profile = await queryClient
@@ -66,7 +63,6 @@ export function useSessionBootstrap() {
   const { data: profile } = useProfile();
   const [session, setSession] = useAtom(sessionAtom);
   const signedOut = useAtomValue(signedOutAtom);
-  const setLastEmail = useSetAtom(lastEmailAtom);
 
   useEffect(() => {
     if (signedOut || session || !profile?.email) return;
@@ -75,34 +71,31 @@ export function useSessionBootstrap() {
       document: profile.document,
       via: "code",
     });
-    setLastEmail(profile.email);
-  }, [profile, session, signedOut, setSession, setLastEmail]);
+  }, [profile, session, signedOut, setSession]);
 }
 
 export function useSignIn() {
   const setSession = useSetAtom(sessionAtom);
-  const setLastEmail = useSetAtom(lastEmailAtom);
   const setSignedOut = useSetAtom(signedOutAtom);
 
   return useCallback(
     (session: Session) => {
       setSignedOut(false);
       setSession(session);
-      setLastEmail(session.email);
     },
-    [setSession, setLastEmail, setSignedOut],
+    [setSession, setSignedOut],
   );
 }
 
 export function useSignOut() {
   const queryClient = useQueryClient();
+  const signedInAs = useAtomValue(sessionAtom)?.email ?? "";
   const setSession = useSetAtom(sessionAtom);
   const setSignedOut = useSetAtom(signedOutAtom);
   const setLoginStep = useSetAtom(loginStepAtom);
   const setDraftEmail = useSetAtom(draftEmailAtom);
   const setMessages = useSetAtom(chatMessagesAtom);
   const setMobileChatOpen = useSetAtom(mobileChatOpenAtom);
-  const lastEmail = useAtomValue(lastEmailAtom);
 
   return useCallback(() => {
     // Only the gateway can end the session: its cookie is httpOnly and
@@ -117,13 +110,14 @@ export function useSignOut() {
     setSignedOut(true);
     setSession(null);
     setLoginStep("email");
-    setDraftEmail(lastEmail);
+    // Carry the address into the form so the person is not made to retype it.
+    setDraftEmail(signedInAs);
     setMessages([]);
     setMobileChatOpen(false);
     queryClient.clear();
   }, [
     queryClient,
-    lastEmail,
+    signedInAs,
     setSession,
     setSignedOut,
     setLoginStep,

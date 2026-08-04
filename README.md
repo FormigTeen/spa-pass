@@ -123,13 +123,13 @@ sobreviveria ao logout deixando `auth.currentUser` para o próximo visitante.
 `src/agent/agent.ts` → `askAgent()`. É o único ponto de contato: transcript,
 placeholder de digitação, erro e composer já funcionam em volta dele.
 
-## Estado persistido (Jotai)
+## Estado
 
-| Chave | Uso |
-|---|---|
-| `passkey-poc:last-email` | preenche o form e alimenta a mediação condicional |
-| `passkey-poc:device-enrolled` | aparelho já alcança a chave — só esconde a oferta |
-| `passkey-poc:enrol-dismissed` | quem recusou o registro |
+Nada é persistido. Se a conta tem chave de acesso, quem responde é o
+`passkeyLoginOptions`; o perfil vem do `useProfile()`, em cache pelo react-query.
+Guardar cópia disso no `localStorage` só cria um segundo dado para sair de
+sincronia com o servidor — foi o que aconteceu ao limpar a tabela e o app
+continuar achando que havia chave.
 
 ## Scripts
 

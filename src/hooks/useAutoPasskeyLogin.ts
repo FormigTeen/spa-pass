@@ -1,7 +1,5 @@
 import { useCallback, useState } from "react";
-import { useAtomValue } from "jotai";
 import { useQueryClient } from "@tanstack/react-query";
-import { lastEmailAtom } from "../state/atoms";
 import {
   isNoCredentials,
   isUserCancellation,
@@ -19,14 +17,12 @@ export type AttemptOutcome = "signed-in" | "no-credentials" | "failed";
 
 export type PasskeyGate = {
   status: PasskeyGateStatus;
-  email: string;
   error: string;
   /** Authenticate with the key registered for this address. */
   attempt: (email: string) => Promise<AttemptOutcome>;
 };
 
 export function useAutoPasskeyLogin(): PasskeyGate {
-  const lastEmail = useAtomValue(lastEmailAtom);
   const { loginWithPasskey } = usePasskey();
   const queryClient = useQueryClient();
 
@@ -67,5 +63,5 @@ export function useAutoPasskeyLogin(): PasskeyGate {
     [loginWithPasskey, finish],
   );
 
-  return { status, email: lastEmail, error, attempt };
+  return { status, error, attempt };
 }

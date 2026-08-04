@@ -7,9 +7,9 @@ import {
   type FormEvent,
 } from "react";
 import { motion } from "framer-motion";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom } from "jotai";
 import { Loader2 } from "lucide-react";
-import { draftEmailAtom, lastEmailAtom, loginStepAtom } from "../state/atoms";
+import { draftEmailAtom, loginStepAtom } from "../state/atoms";
 import { useEmailCodeAuth } from "../hooks/useAuth";
 import { gatewayErrorMessage } from "../lib/gateway";
 import { cn } from "../lib/cn";
@@ -26,18 +26,12 @@ const codeRequestMessage = (error: unknown) => {
 
 export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
   const [email, setEmail] = useAtom(draftEmailAtom);
-  const lastEmail = useAtomValue(lastEmailAtom);
   const [, setStep] = useAtom(loginStepAtom);
   const [focused, setFocused] = useState(false);
   const [error, setError] = useState("");
   const [authenticating, setAuthenticating] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { requestCode } = useEmailCodeAuth();
-
-  // Prefill with the remembered email the first time the form is shown.
-  useEffect(() => {
-    if (!email && lastEmail) setEmail(lastEmail);
-  }, [email, lastEmail, setEmail]);
 
   const isValid = EMAIL_PATTERN.test(email);
   const busy = authenticating || requestCode.isPending;
