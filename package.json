@@ -4,6 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "hosts": "node scripts/hosts.mjs",
+    "host": "node scripts/hosts.mjs",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
@@ -12,20 +14,27 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
-    "@apollo/client": "^3.13.8",
     "@simplewebauthn/browser": "^13.1.0",
     "@tailwindcss/vite": "^4.1.4",
+    "@tanstack/react-query": "^5.101.4",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.43.0",
     "graphql": "^16.11.0",
+    "graphql-request": "^7.4.0",
+    "jotai": "^2.20.2",
+    "lucide-react": "^1.28.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-use": "^17.6.0",
     "rect-use": "^1.0.0",
+    "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.1.4"
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
     "@vitejs/plugin-react": "^4.3.4",
     "eslint": "^9.22.0",
     "eslint-plugin-react-hooks": "^5.2.0",

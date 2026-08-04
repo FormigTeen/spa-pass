@@ -1,0 +1,63 @@
+import { useEffect, useRef } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import type { ChatMessage } from "../state/atoms";
+import { cn } from "../lib/cn";
+
+export function ChatTranscript({ messages }: { messages: ChatMessage[] }) {
+  const bottom = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottom.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages]);
+
+  return (
+    <div className="no-scrollbar h-full overflow-y-auto py-6 space-y-4">
+      <AnimatePresence initial={false}>
+        {messages.map((message) => (
+          <motion.div
+            key={message.id}
+            layout
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className={cn(
+              "flex",
+              message.role === "user" ? "justify-end" : "justify-start",
+            )}
+          >
+            <div
+              className={cn(
+                "max-w-[85%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed",
+                message.role === "user"
+                  ? "bg-white text-gray-900 rounded-br-md"
+                  : "bg-white/10 text-white rounded-bl-md",
+              )}
+            >
+              {message.pending ? <TypingDots /> : message.content}
+            </div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+      <div ref={bottom} />
+    </div>
+  );
+}
+
+function TypingDots() {
+  return (
+    <span className="flex items-center gap-1 py-1" aria-label="Digitando">
+      {[0, 1, 2].map((index) => (
+        <motion.span
+          key={index}
+          className="w-1.5 h-1.5 rounded-full bg-white/70"
+          animate={{ opacity: [0.3, 1, 0.3] }}
+          transition={{
+            duration: 1.1,
+            repeat: Infinity,
+            delay: index * 0.18,
+          }}
+        />
+      ))}
+    </span>
+  );
+}
