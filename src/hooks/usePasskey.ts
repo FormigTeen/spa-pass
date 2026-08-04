@@ -5,7 +5,6 @@ import {
   platformAuthenticatorIsAvailable,
   startAuthentication,
   startRegistration,
-  WebAuthnAbortService,
 } from "@simplewebauthn/browser";
 import { core, gatewayErrorMessage } from "../lib/gateway";
 import {
@@ -45,16 +44,6 @@ export const passkeyErrorMessage = (error: unknown) => {
 };
 
 export const supportsPasskey = () => browserSupportsWebAuthn();
-
-/**
- * How long the silent check may take before the login form gives up on it.
- *
- * An authenticator that holds no matching credential normally rejects at once,
- * but nothing guarantees it: the request otherwise runs to the server's 60s
- * timeout, leaving someone staring at a button that looks stuck. The code is
- * always waiting behind it, so a few seconds is a fair ceiling.
- */
-const SILENT_CHECK_TIMEOUT = 4000;
 
 /**
  * Restricts the request to credentials this device can serve on its own.
@@ -103,29 +92,14 @@ export function usePasskey() {
       const optionsJSON = preloaded ?? (await loginOptions(email));
       if (!optionsJSON) throw new Error("Nenhuma chave de acesso disponível.");
 
-      const ceremony = startAuthentication({
+      // No timeout here, deliberately. A device with no match refuses on its
+      // own; a device that has the key is waiting for a finger on the sensor,
+      // and capping the wait cancelled real logins mid-prompt.
+      const key = await startAuthentication({
         optionsJSON: (localOnly
           ? localCredentialsOnly(optionsJSON)
           : optionsJSON) as never,
       });
-
-      // The silent check must not outlast the patience of someone who just
-      // pressed a button, so it is capped and the ceremony cancelled.
-      const key = localOnly
-        ? await Promise.race([
-            ceremony,
-            new Promise<never>((_, reject) =>
-              setTimeout(() => {
-                WebAuthnAbortService.cancelCeremony();
-                reject(
-                  Object.assign(new Error("Nenhuma chave neste dispositivo."), {
-                    name: "NotAllowedError",
-                  }),
-                );
-              }, SILENT_CHECK_TIMEOUT),
-            ),
-          ])
-        : await ceremony;
 
       const data = await core<{ passkeyLogin: PasskeyToken }>(PASSKEY_LOGIN, {
         email,
