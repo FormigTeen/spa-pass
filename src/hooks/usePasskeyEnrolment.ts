@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAtom, useAtomValue } from "jotai";
-import {
-  deviceEnrolledAtom,
-  enrolDismissedAtom,
-  sessionAtom,
-} from "../state/atoms";
+import { enrolDismissedAtom, sessionAtom } from "../state/atoms";
 import {
   isAlreadyRegistered,
   isUserCancellation,
@@ -32,7 +28,6 @@ export function usePasskeyEnrolment() {
   const session = useAtomValue(sessionAtom);
   const { data: profile, isFetched } = useProfile();
   const [dismissed, setDismissed] = useAtom(enrolDismissedAtom);
-  const [deviceEnrolled, setDeviceEnrolled] = useAtom(deviceEnrolledAtom);
   const { enrolPasskey, hasPasskey } = usePasskey();
 
   const [status, setStatus] = useState<EnrolmentStatus>("checking");
@@ -42,20 +37,11 @@ export function usePasskeyEnrolment() {
   const email = session?.email ?? "";
   const canEnrol = Boolean(profile?.email);
 
-  const remember = useCallback(
-    () =>
-      setDeviceEnrolled((current) =>
-        current.includes(email) ? current : [...current, email],
-      ),
-    [email, setDeviceEnrolled],
-  );
-
   const enrol = useCallback(async () => {
     setStatus("prompting");
     setError("");
     try {
       await enrolPasskey();
-      remember();
       setStatus("enrolled");
     } catch (caught) {
       if (isUserCancellation(caught)) {
@@ -64,15 +50,14 @@ export function usePasskeyEnrolment() {
         return;
       }
       if (isAlreadyRegistered(caught)) {
-        remember();
-        setStatus("enrolled");
+          setStatus("enrolled");
         setError("");
         return;
       }
       setStatus("error");
       setError(passkeyErrorMessage(caught));
     }
-  }, [enrolPasskey, remember]);
+  }, [enrolPasskey]);
 
   const dismiss = useCallback(() => {
     setDismissed((current) =>
@@ -91,11 +76,6 @@ export function usePasskeyEnrolment() {
 
     started.current = true;
 
-    if (deviceEnrolled.includes(email)) {
-      setStatus("enrolled");
-      return;
-    }
-
     void (async () => {
       setStatus("checking");
       if (await hasPasskey(email)) {
@@ -104,7 +84,7 @@ export function usePasskeyEnrolment() {
       }
       setStatus(dismissed.includes(email) ? "dismissed" : "offer");
     })();
-  }, [session, isFetched, canEnrol, dismissed, deviceEnrolled, email, hasPasskey]);
+  }, [session, isFetched, canEnrol, dismissed, email, hasPasskey]);
 
   return {
     status,
@@ -112,7 +92,5 @@ export function usePasskeyEnrolment() {
     enrol,
     dismiss,
     canEnrol,
-    /** This device is known to hold a key — learned, never assumed. */
-    deviceHasKey: deviceEnrolled.includes(email),
   };
 }

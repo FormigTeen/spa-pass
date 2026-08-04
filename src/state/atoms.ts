@@ -43,22 +43,8 @@ export const lastEmailAtom = atomWithStorage<string>(
   { getOnInit: true },
 );
 
-export const deviceEnrolledAtom = atomWithStorage<string[]>(
-  "passkey-poc:device-enrolled",
-  [],
-  undefined,
-  // Without `getOnInit` these atoms start empty and hydrate a tick later —
-  // offer enrolment to a device that had already answered.
-  { getOnInit: true },
-);
-
-/** Emails that declined the enrolment upsell — do not nag them again. */
-export const enrolDismissedAtom = atomWithStorage<string[]>(
-  "passkey-poc:enrol-dismissed",
-  [],
-  undefined,
-  { getOnInit: true },
-);
+/** Emails that declined the enrolment offer, for this tab only. */
+export const enrolDismissedAtom = atom<string[]>([]);
 
 /* ── chat ────────────────────────────────────────────────────── */
 

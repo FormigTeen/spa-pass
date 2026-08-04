@@ -24,11 +24,8 @@ export function ProfileCard({ enrolment }: { enrolment: Enrolment }) {
   // Keyed to the device, not the account: a phone whose key lives on a laptop
   // still needs a way in, while a device that has just signed in with a key
   // needs nothing. The card below covers the case where it is already asking.
-  const asking =
-    enrolment.status === "offer" ||
-    enrolment.status === "prompting" ||
-    enrolment.status === "error";
-  const canReconsider = enrolment.canEnrol && !enrolment.deviceHasKey && !asking;
+  // Only when the account has no key and the card is not already asking.
+  const canReconsider = enrolment.status === "dismissed";
 
   return (
     <motion.section

@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
-import { useAtomValue, useSetAtom } from "jotai";
+import { useAtomValue } from "jotai";
 import { useQueryClient } from "@tanstack/react-query";
-import { deviceEnrolledAtom, lastEmailAtom } from "../state/atoms";
+import { lastEmailAtom } from "../state/atoms";
 import {
   isNoCredentials,
   isUserCancellation,
@@ -29,7 +29,6 @@ export function useAutoPasskeyLogin(): PasskeyGate {
   const lastEmail = useAtomValue(lastEmailAtom);
   const { loginWithPasskey } = usePasskey();
   const queryClient = useQueryClient();
-  const setDeviceEnrolled = useSetAtom(deviceEnrolledAtom);
 
   const [status, setStatus] = useState<PasskeyGateStatus>("idle");
   const [error, setError] = useState("");
@@ -38,13 +37,10 @@ export function useAutoPasskeyLogin(): PasskeyGate {
     async (token: PasskeyToken) => {
       setStatus("linking");
       await completeVtexFirebaseSession(token.token);
-      setDeviceEnrolled((current) =>
-        current.includes(token.email) ? current : [...current, token.email],
-      );
       await queryClient.invalidateQueries({ queryKey: profileQueryKey });
       setStatus("idle");
     },
-    [queryClient, setDeviceEnrolled],
+    [queryClient],
   );
 
   const attempt = useCallback(
