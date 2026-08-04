@@ -12,13 +12,15 @@ import {
   supportsPasskey,
   usePasskey,
 } from "./usePasskey";
-import { useSignIn } from "./useAuth";
-import { useProfile } from "./useProfile";
+import { completeVtexFirebaseSession } from "../lib/vtexFirebaseSession";
+import { useQueryClient } from "@tanstack/react-query";
+import { profileQueryKey, useProfile } from "./useProfile";
 
 export type PasskeyGateStatus =
   | "idle" // nothing to do — show the normal email form
   | "checking" // asking the gateway whether this email has a key
   | "prompting" // the OS biometric sheet is up
+  | "linking" // biometrics passed; VTEX is issuing the session
   | "failed"; // the attempt did not complete
 
 type AuthOptions = { allowCredentials?: unknown[] } & Record<string, unknown>;
@@ -51,7 +53,7 @@ export function useAutoPasskeyLogin(): PasskeyGate {
   const signedOut = useAtomValue(signedOutAtom);
   const [passkeyEmails, setPasskeyEmails] = useAtom(passkeyEmailsAtom);
   const { loginOptions, loginWithPasskey } = usePasskey();
-  const signIn = useSignIn();
+  const queryClient = useQueryClient();
 
   // Wait for the cookie check before prompting, so an already signed in user
   // is never asked for a fingerprint.
@@ -122,8 +124,17 @@ export function useAutoPasskeyLogin(): PasskeyGate {
 
       try {
         const token = await loginWithPasskey(email, preloaded);
-        signIn({ email: token.email, token: token.token, via: "passkey" });
         rememberKey(email, true);
+
+        // The passkey only proves who you are to Firebase. VTEX still has to
+        // issue the session, and that finishes in a redirect — after which
+        // `getProfile` bootstraps the session for real.
+        setStatus("linking");
+        await completeVtexFirebaseSession(token.token);
+
+        // The gateway cookie exists now, so the profile query becomes the
+        // source of truth and `useSessionBootstrap` opens the session.
+        await queryClient.invalidateQueries({ queryKey: profileQueryKey });
         setStatus("idle");
       } catch (caught) {
         setStatus("failed");
@@ -131,7 +142,7 @@ export function useAutoPasskeyLogin(): PasskeyGate {
         setError(isUserCancellation(caught) ? "" : passkeyErrorMessage(caught));
       }
     },
-    [loginWithPasskey, signIn, rememberKey],
+    [loginWithPasskey, rememberKey, queryClient],
   );
 
   const attempt = useCallback(

@@ -13,10 +13,10 @@
  * cookies for its own host or a *parent* domain — never a sibling subdomain
  * like `api-gateway.cvlb.tech`. That holds in production too.
  *
- * A real sign out needs the gateway to expire the cookie itself (a mutation or
- * endpoint responding `Set-Cookie: ...; Max-Age=0`). Until then `signedOutAtom`
- * drops the session client-side, and this stays as a best effort for any
- * first-party, non-httpOnly auth cookie.
+ * It DOES clear the cookies `applySessionCookies` writes on `.cvlb.tech`, since
+ * those are ours and not httpOnly — so a passkey session signs out completely.
+ * A code sign in still leaves the gateway's own cookie behind, and clearing
+ * that needs the gateway to expire it (`Set-Cookie: ...; Max-Age=0`).
  */
 const AUTH_COOKIE = "VtexIdclientAutCookie";
 
@@ -30,6 +30,34 @@ const candidateDomains = (hostname: string) => {
     domains.push(`.${parts.slice(index).join(".")}`);
   return domains;
 };
+
+/**
+ * Parent domain the app shares with the gateway. A cookie scoped here is sent
+ * to every `*.cvlb.tech` host — including `api-gateway.cvlb.tech`, which the
+ * app cannot address directly (it is a sibling, not a parent).
+ */
+const SHARED_DOMAIN = ".cvlb.tech";
+
+/**
+ * Writes the `VtexId*` cookies that `/oauth/v1/firebase/authorize` returns as
+ * JSON, so subsequent gateway calls carry the session.
+ *
+ * These are necessarily readable from JS — the browser cannot recreate the
+ * `httpOnly` flag the gateway would set itself. That is the trade of doing the
+ * handshake client-side.
+ */
+export function applySessionCookies(cookies: Record<string, string>): string[] {
+  const written: string[] = [];
+
+  for (const [name, value] of Object.entries(cookies)) {
+    if (!name || typeof value !== "string") continue;
+    document.cookie =
+      `${name}=${value}; Domain=${SHARED_DOMAIN}; Path=/; Secure; SameSite=None`;
+    written.push(name);
+  }
+
+  return written;
+}
 
 export function clearAuthCookies(): string[] {
   const names = document.cookie

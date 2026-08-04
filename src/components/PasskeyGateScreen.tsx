@@ -8,6 +8,7 @@ import type { PasskeyGate } from "../hooks/useAutoPasskeyLogin";
  */
 export function PasskeyGateScreen({ gate }: { gate: PasskeyGate }) {
   const prompting = gate.status === "prompting";
+  const linking = gate.status === "linking";
 
   return (
     <motion.div
@@ -20,11 +21,11 @@ export function PasskeyGateScreen({ gate }: { gate: PasskeyGate }) {
       <div className="flex justify-center">
         <motion.div
           animate={
-            prompting
+            prompting || linking
               ? { scale: [1, 1.08, 1], opacity: [0.85, 1, 0.85] }
               : { scale: 1, opacity: 1 }
           }
-          transition={{ duration: 1.6, repeat: prompting ? Infinity : 0 }}
+          transition={{ duration: 1.6, repeat: prompting || linking ? Infinity : 0 }}
           className="w-20 h-20 rounded-3xl bg-gray-900 flex items-center justify-center"
         >
           <Fingerprint className="w-10 h-10 text-white" aria-hidden />
@@ -32,11 +33,17 @@ export function PasskeyGateScreen({ gate }: { gate: PasskeyGate }) {
       </div>
 
       <h1 className="mt-8 text-3xl md:text-4xl font-medium text-gray-900 tracking-tight">
-        {prompting ? "Confirme que é você" : "Procurando sua chave..."}
+        {linking
+          ? "Quase lá..."
+          : prompting
+            ? "Confirme que é você"
+            : "Procurando sua chave..."}
       </h1>
 
       <p className="mt-4 text-lg text-gray-500 leading-relaxed">
-        {prompting ? (
+        {linking ? (
+          "Estamos abrindo sua sessão."
+        ) : prompting ? (
           <>
             Use a biometria deste dispositivo para entrar como{" "}
             <span className="text-gray-900 font-medium">{gate.email}</span>.
@@ -46,6 +53,7 @@ export function PasskeyGateScreen({ gate }: { gate: PasskeyGate }) {
         )}
       </p>
 
+      {!linking && (
       <button
         type="button"
         onClick={gate.skip}
@@ -53,6 +61,7 @@ export function PasskeyGateScreen({ gate }: { gate: PasskeyGate }) {
       >
         Usar outro método
       </button>
+      )}
     </motion.div>
   );
 }

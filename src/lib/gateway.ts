@@ -31,8 +31,16 @@ export const coreClient = client("core");
 export const core = <T>(document: string, variables?: object) =>
   coreClient.request<T>(document, variables);
 
-export const ecom = <T>(document: string, variables?: object) =>
-  ecomClient.request<T>(document, variables);
+export const ecom = <T>(
+  document: string,
+  variables?: object,
+  requestHeaders?: Record<string, string>,
+) =>
+  ecomClient.request<T>({
+    document,
+    variables: variables as never,
+    requestHeaders,
+  });
 
 /** Unwraps the gateway's GraphQL errors into a readable message. */
 export const gatewayErrorMessage = (error: unknown, fallback: string) => {

@@ -14,6 +14,17 @@ export const ACCESS_KEY_SIGN_IN = gql`
   }
 `;
 
+/**
+ * VTEX's own OAuth mutation, reached through the ecom proxy. Sent with the
+ * header `X-Firebase-Authorization: Bearer <idToken>`; the response is the
+ * VTEX ID redirect that finishes the login and sets the session cookies.
+ */
+export const OAUTH_FIREBASE = gql`
+  mutation OAuthFirebase {
+    oAuth(provider: "Firebase")
+  }
+`;
+
 /* ── core module (gq_example) ────────────────────────────────── */
 
 export const GET_PROFILE = gql`
