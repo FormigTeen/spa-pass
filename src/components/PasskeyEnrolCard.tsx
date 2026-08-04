@@ -1,17 +1,13 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { KeyRound, Loader2 } from "lucide-react";
+import { ArrowRight, KeyRound, Loader2, X } from "lucide-react";
 import type { usePasskeyEnrolment } from "../hooks/usePasskeyEnrolment";
 
 type Enrolment = ReturnType<typeof usePasskeyEnrolment>;
 
-/**
- * The ask that appears when the account has no passkey on this device. The OS
- * sheet only opens on "Sim, registrar" — never on its own — and "Agora não" is
- * remembered per email so the question is not repeated.
- */
 export function PasskeyEnrolCard({ enrolment }: { enrolment: Enrolment }) {
   const { status, error, enrol, dismiss } = enrolment;
   const visible = status === "offer" || status === "prompting" || status === "error";
+  const busy = status === "prompting";
 
   return (
     <AnimatePresence>
@@ -24,68 +20,52 @@ export function PasskeyEnrolCard({ enrolment }: { enrolment: Enrolment }) {
           aria-live="polite"
           className="w-full overflow-hidden"
         >
-          <div className="rounded-2xl border border-cream/15 bg-brand text-cream p-5">
-            <div className="flex items-start gap-4">
-              <motion.div
-                animate={
-                  status === "prompting"
-                    ? { scale: [1, 1.1, 1] }
-                    : { scale: 1 }
-                }
-                transition={{
-                  duration: 1.4,
-                  repeat: status === "prompting" ? Infinity : 0,
-                }}
-                className="w-11 h-11 shrink-0 rounded-full bg-cream/15 flex items-center justify-center"
-              >
-                <KeyRound className="w-5 h-5" aria-hidden />
-              </motion.div>
+          {/* Dismiss sits alongside the card, not inside it: a button cannot
+              nest within another button. */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => void enrol()}
+              disabled={busy}
+              className="group w-full rounded-2xl bg-white p-5 pr-12 text-left transition-transform disabled:cursor-wait enabled:hover:-translate-y-0.5"
+            >
+              <span className="flex items-center gap-4">
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-ink/5 text-ink">
+                  {busy ? (
+                    <Loader2 className="h-6 w-6 animate-spin" aria-hidden />
+                  ) : (
+                    <KeyRound className="h-6 w-6" aria-hidden />
+                  )}
+                </span>
 
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">
-                  {status === "prompting"
-                    ? "Confirme no seu dispositivo"
-                    : "Quer registrar este dispositivo?"}
-                </p>
-                <p className="mt-1 text-sm text-cream/70 leading-relaxed">
-                  {status === "prompting"
-                    ? "Estamos criando a chave de acesso deste dispositivo."
-                    : "Criamos uma chave de acesso aqui e você entra com o desbloqueio do próprio aparelho, sem esperar código no email."}
-                </p>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium text-ink">
+                    {busy
+                      ? "Confirme no seu dispositivo"
+                      : status === "error"
+                        ? "Tentar de novo"
+                        : "Registrar este dispositivo"}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-ink/50">
+                    {error || "Entre sem esperar código"}
+                  </span>
+                </span>
+              </span>
 
-                {error && (
-                  <p role="alert" className="mt-2 text-sm text-red-300">
-                    {error}
-                  </p>
-                )}
+              <ArrowRight
+                className="absolute bottom-4 right-4 h-4 w-4 text-ink/30 transition-transform group-enabled:group-hover:translate-x-0.5"
+                aria-hidden
+              />
+            </button>
 
-                {status !== "prompting" && (
-                  <div className="mt-4 flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => void enrol()}
-                      className="rounded-lg bg-cream px-4 py-2 text-sm font-medium text-ink hover:bg-cream/90 transition-colors"
-                    >
-                      {status === "error" ? "Tentar de novo" : "Sim, registrar"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={dismiss}
-                      className="text-sm text-cream/60 hover:text-cream transition-colors"
-                    >
-                      Agora não
-                    </button>
-                  </div>
-                )}
-
-                {status === "prompting" && (
-                  <p className="mt-4 inline-flex items-center gap-2 text-sm text-cream/70">
-                    <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
-                    Aguardando o sensor...
-                  </p>
-                )}
-              </div>
-            </div>
+            <button
+              type="button"
+              onClick={dismiss}
+              aria-label="Agora não"
+              className="absolute right-3 top-3 grid h-7 w-7 place-items-center rounded-full text-ink/40 transition-colors hover:bg-ink/5 hover:text-ink"
+            >
+              <X className="h-4 w-4" aria-hidden />
+            </button>
           </div>
         </motion.section>
       )}
