@@ -2,7 +2,7 @@
 
 Duas provas de conceito na mesma tela:
 
-- **Login** por código no email (VTEX) e por **passkey / digital** (WebAuthn).
+- **Login** por código no email (VTEX) e por **chave de acesso** (WebAuthn).
 - **Agente**: um chat plugável, pronto para receber um backend real.
 
 Stack: React 19 + Vite + TypeScript, **Jotai** (estado), **@tanstack/react-query**
@@ -106,8 +106,10 @@ quem consegue tomá-la, e o modo de falha vira silêncio.
 O prompt modal sobreviveu só atrás do botão explícito, onde um erro é
 consequência do que a pessoa pediu.
 
-**Registro (`usePasskeyEnrolment`)** — o card pergunta; o sensor só abre no
-"Sim, registrar". Se o aparelho já alcança uma chave da conta, o servidor recusa
+**Registro (`usePasskeyEnrolment`)** — o card só aparece quando a conta não tem
+**nenhuma** chave, e isso vem do `excludeCredentials` do
+`passkeyRegisterOptions` — autenticado e sobre a própria conta, então não
+reabre o oráculo que o login fechou. O sensor só abre no "Sim, registrar". Se o aparelho já alcança uma chave da conta, o servidor recusa
 via `excludeCredentials` — único momento em que o navegador revela isso — e o
 resultado fica gravado em `passkey-poc:device-enrolled`.
 

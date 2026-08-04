@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useAtomValue } from "jotai";
-import { Fingerprint } from "lucide-react";
+import { KeyRound } from "lucide-react";
 import { sessionAtom } from "../state/atoms";
 import { useProfile } from "../hooks/useProfile";
 import type { usePasskeyEnrolment } from "../hooks/usePasskeyEnrolment";
@@ -59,8 +59,8 @@ export function ProfileCard({ enrolment }: { enrolment: Enrolment }) {
               onClick={() => void enrolment.enrol()}
               className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-cream/40 px-2.5 py-1 text-[11px] font-medium text-cream transition-colors hover:bg-cream hover:text-ink"
             >
-              <Fingerprint className="w-3.5 h-3.5" aria-hidden />
-              Registrar digital
+              <KeyRound className="w-3.5 h-3.5" aria-hidden />
+              Registrar este dispositivo
             </button>
           )}
         </div>

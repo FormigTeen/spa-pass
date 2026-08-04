@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Fingerprint } from "lucide-react";
+import { KeyRound } from "lucide-react";
 import type { PasskeyGate } from "../hooks/useAutoPasskeyLogin";
 
 /**
@@ -29,7 +29,7 @@ export function PasskeyGateScreen({ gate }: { gate: PasskeyGate }) {
           transition={{ duration: 1.6, repeat: prompting || linking ? Infinity : 0 }}
           className="w-20 h-20 rounded-3xl bg-cream/10 flex items-center justify-center"
         >
-          <Fingerprint className="w-10 h-10 text-cream" aria-hidden />
+          <KeyRound className="w-10 h-10 text-cream" aria-hidden />
         </motion.div>
       </div>
 
@@ -42,7 +42,7 @@ export function PasskeyGateScreen({ gate }: { gate: PasskeyGate }) {
           "Estamos abrindo sua sessão."
         ) : (
           <>
-            Use a biometria deste dispositivo para entrar como{" "}
+            Use o desbloqueio deste dispositivo para entrar como{" "}
             <span className="text-cream font-medium">{gate.email}</span>.
           </>
         )}

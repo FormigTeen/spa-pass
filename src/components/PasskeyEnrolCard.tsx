@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Fingerprint, Loader2 } from "lucide-react";
+import { KeyRound, Loader2 } from "lucide-react";
 import type { usePasskeyEnrolment } from "../hooks/usePasskeyEnrolment";
 
 type Enrolment = ReturnType<typeof usePasskeyEnrolment>;
@@ -38,19 +38,19 @@ export function PasskeyEnrolCard({ enrolment }: { enrolment: Enrolment }) {
                 }}
                 className="w-11 h-11 shrink-0 rounded-full bg-cream/15 flex items-center justify-center"
               >
-                <Fingerprint className="w-5 h-5" aria-hidden />
+                <KeyRound className="w-5 h-5" aria-hidden />
               </motion.div>
 
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium">
                   {status === "prompting"
                     ? "Confirme no seu dispositivo"
-                    : "Quer entrar com a digital da próxima vez?"}
+                    : "Quer registrar este dispositivo?"}
                 </p>
                 <p className="mt-1 text-sm text-cream/70 leading-relaxed">
                   {status === "prompting"
-                    ? "Estamos criando sua chave de acesso neste dispositivo."
-                    : "Registramos uma chave de acesso neste aparelho e você entra sem esperar código no email."}
+                    ? "Estamos criando a chave de acesso deste dispositivo."
+                    : "Criamos uma chave de acesso aqui e você entra com o desbloqueio do próprio aparelho, sem esperar código no email."}
                 </p>
 
                 {error && (
