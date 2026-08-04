@@ -17,6 +17,7 @@ import {
   type Session,
 } from "../state/atoms";
 import { clearAuthCookies } from "../lib/session";
+import { signOutFirebase } from "../lib/firebase";
 import { fetchProfile, profileQueryKey, useProfile } from "./useProfile";
 
 /** Email + verification code sign in, against the ecom module. */
@@ -107,6 +108,8 @@ export function useSignOut() {
     // to another origin and is out of reach, so `signedOut` guarantees the tab
     // drops the session either way.
     clearAuthCookies();
+    // Firebase holds a session of its own, in IndexedDB rather than a cookie.
+    void signOutFirebase();
     setSignedOut(true);
     setSession(null);
     setLoginStep("email");

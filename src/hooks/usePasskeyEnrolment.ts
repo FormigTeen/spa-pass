@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAtom, useAtomValue } from "jotai";
-import { enrolDismissedAtom, sessionAtom } from "../state/atoms";
+import {
+  deviceEnrolledAtom,
+  enrolDismissedAtom,
+  sessionAtom,
+} from "../state/atoms";
 import {
   isAlreadyRegistered,
   isUserCancellation,
@@ -32,6 +36,7 @@ export function usePasskeyEnrolment() {
   const session = useAtomValue(sessionAtom);
   const { data: profile, isFetched } = useProfile();
   const [dismissed, setDismissed] = useAtom(enrolDismissedAtom);
+  const [deviceEnrolled, setDeviceEnrolled] = useAtom(deviceEnrolledAtom);
   const { enrolPasskey } = usePasskey();
 
   const [status, setStatus] = useState<EnrolmentStatus>("checking");
@@ -41,11 +46,20 @@ export function usePasskeyEnrolment() {
   const email = session?.email ?? "";
   const canEnrol = Boolean(profile?.email);
 
+  const remember = useCallback(
+    () =>
+      setDeviceEnrolled((current) =>
+        current.includes(email) ? current : [...current, email],
+      ),
+    [email, setDeviceEnrolled],
+  );
+
   const enrol = useCallback(async () => {
     setStatus("prompting");
     setError("");
     try {
       await enrolPasskey();
+      remember();
       setStatus("enrolled");
     } catch (caught) {
       if (isUserCancellation(caught)) {
@@ -53,12 +67,11 @@ export function usePasskeyEnrolment() {
         setError("");
         return;
       }
-      // A synced passkey the account already owns: nothing was created here,
-      // so this device must NOT join the enrolled list — that list is what
-      // authorises the automatic prompt, and prompting a device that holds no
-      // credential is exactly how "no passkey available" appears. Silence the
-      // question instead.
+      // Refused via `excludeCredentials`: this device can already reach a key
+      // for the account. That refusal is the only moment WebAuthn reveals it,
+      // so record it and stop offering.
       if (isAlreadyRegistered(caught)) {
+        remember();
         setStatus("enrolled");
         setError("");
         return;
@@ -66,7 +79,7 @@ export function usePasskeyEnrolment() {
       setStatus("error");
       setError(passkeyErrorMessage(caught));
     }
-  }, [enrolPasskey]);
+  }, [enrolPasskey, remember]);
 
   const dismiss = useCallback(() => {
     setDismissed((current) =>
@@ -87,12 +100,15 @@ export function usePasskeyEnrolment() {
 
     started.current = true;
 
-    // Nothing left to ask: login options carry no credential list, and no API
-    // reports what this device holds. Offer, and let the attempt itself settle
-    // it — a key the device can already reach is refused via
-    // `excludeCredentials`, which `enrol` reads as "already enrolled".
+    // Only what this device has learned about itself. The gateway cannot help:
+    // login options carry no credential list, and it answers for the account,
+    // not the device.
+    if (deviceEnrolled.includes(email)) {
+      setStatus("enrolled");
+      return;
+    }
     setStatus(dismissed.includes(email) ? "dismissed" : "offer");
-  }, [session, isFetched, canEnrol, dismissed, email]);
+  }, [session, isFetched, canEnrol, dismissed, deviceEnrolled, email]);
 
   return { status, error, enrol, dismiss, canEnrol };
 }

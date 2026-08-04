@@ -91,14 +91,29 @@ email.
 
 ## Fluxos
 
-**Usuário recorrente (`useAutoPasskeyLogin`)** — se há email salvo, ninguém está
-logado e o gateway confirma credencial (`allowCredentials` não vazio), a digital
-é pedida sozinha. Cancelar cai no formulário de email com um botão para tentar
-de novo.
+**Usuário recorrente (`useAutoPasskeyLogin`)** — via **mediação condicional**:
+a passkey aparece na lista de autofill do campo de email, e só se o navegador
+realmente tiver uma. Nada é disparado por conta própria.
 
-**Registro (`usePasskeyEnrolment`)** — logado sem passkey, o card explica e
-dispara o prompt 1,4 s depois. "Agora não" é lembrado por email; cancelar o
-sensor **não** re-dispara.
+Isso não é detalhe de implementação. Não existe API para perguntar "este
+aparelho tem a credencial X?" — enumerar credenciais seria fingerprinting — e o
+gateway responde pela **conta**, não pelo aparelho. Um celular pode não ter nada
+enquanto a chave da conta está no notebook. Manter esse palpite no storage foi a
+origem de todos os bugs desta área: modal abrindo sozinho, QR no desktop,
+"nenhuma chave disponível" ao sair. A mediação condicional entrega a decisão a
+quem consegue tomá-la, e o modo de falha vira silêncio.
+
+O prompt modal sobreviveu só atrás do botão explícito, onde um erro é
+consequência do que a pessoa pediu.
+
+**Registro (`usePasskeyEnrolment`)** — o card pergunta; o sensor só abre no
+"Sim, registrar". Se o aparelho já alcança uma chave da conta, o servidor recusa
+via `excludeCredentials` — único momento em que o navegador revela isso — e o
+resultado fica gravado em `passkey-poc:device-enrolled`.
+
+Gravar **esse** dado é seguro, e a diferença importa: ele só **esconde a
+oferta**, nunca autoriza um prompt. Errar custa um card que não apareceu, não
+uma tela do SO falhando.
 
 **Sair** — ⚠️ **incompleto, e não dá para resolver no cliente.** Verificado
 contra o gateway: o cookie de sessão volta como
@@ -111,9 +126,13 @@ VtexIdclientAutCookie_lebiscuit   domain=api-gateway.cvlb.tech   httpOnly=true
 página só escreve cookie para o próprio host ou para um domínio **pai** — nunca
 para um **irmão** como `api-gateway.cvlb.tech`. Vale em produção também.
 
-Hoje o "Sair" derruba a sessão só no cliente (`signedOutAtom`): a UI volta para
-o login, mas **o cookie continua válido** e um reload restaura a sessão. Para
-logout de verdade o gateway precisa expirar o cookie (mutation/endpoint
+Sair também encerra a sessão do **Firebase** (`signOut`), que vive em IndexedDB
+e sobreviveria ao logout, deixando `auth.currentUser` para o próximo visitante
+do aparelho.
+
+Hoje o "Sair" derruba a sessão VTEX só no cliente (`signedOutAtom`): a UI volta
+para o login, mas **o cookie continua válido** e um reload restaura a sessão.
+Para logout de verdade o gateway precisa expirar o cookie (mutation/endpoint
 respondendo `Set-Cookie: ...; Max-Age=0`).
 
 ## Onde plugar o agente
@@ -125,8 +144,8 @@ placeholder de digitação, erro e composer já funcionam em volta dele.
 
 | Chave | Uso |
 |---|---|
-| `passkey-poc:last-email` | preenche o form e dispara o auto-login |
-| `passkey-poc:passkey-emails` | emails com chave conhecida neste device |
+| `passkey-poc:last-email` | preenche o form e alimenta a mediação condicional |
+| `passkey-poc:device-enrolled` | aparelho já alcança a chave — só esconde a oferta |
 | `passkey-poc:enrol-dismissed` | quem recusou o registro |
 
 ## Scripts

@@ -1,5 +1,9 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, signInWithCustomToken } from "firebase/auth";
+import {
+  getAuth,
+  signInWithCustomToken,
+  signOut as firebaseSignOut,
+} from "firebase/auth";
 
 /** Web config is public by design — it ships in every client bundle. */
 const firebaseConfig = {
@@ -26,3 +30,11 @@ export async function exchangeCustomTokenForIdToken(customToken: string) {
   const credential = await signInWithCustomToken(auth, customToken);
   return credential.user.getIdToken();
 }
+
+/**
+ * Firebase keeps its own session in IndexedDB, independent of the VTEX cookie.
+ * Without this, signing out leaves `auth.currentUser` behind and the next
+ * visitor on the device inherits a live Firebase identity.
+ */
+export const signOutFirebase = () =>
+  firebaseSignOut(auth).catch(() => undefined);
