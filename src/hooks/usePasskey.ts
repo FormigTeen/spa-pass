@@ -31,6 +31,26 @@ export const passkeyErrorMessage = (error: unknown) => {
 
 export const supportsPasskey = () => browserSupportsWebAuthn();
 
+/**
+ * Steers the browser to this device's built-in sensor.
+ *
+ * Without `authenticatorAttachment: "platform"` the browser opens its full
+ * picker — phone over QR, security key, another device — and the fingerprint
+ * is just one option buried in it. These are client-side hints, so overriding
+ * them does not invalidate the server's challenge.
+ */
+const preferBuiltInSensor = <T extends Record<string, unknown>>(options: T) => ({
+  ...options,
+  authenticatorSelection: {
+    residentKey: "preferred",
+    userVerification: "preferred",
+    ...((options.authenticatorSelection as object) ?? {}),
+    authenticatorAttachment: "platform",
+  },
+  // Ignored by browsers that do not know it yet.
+  hints: ["client-device"],
+});
+
 export const supportsPlatformAuthenticator = () =>
   platformAuthenticatorIsAvailable().catch(() => false);
 
@@ -66,7 +86,7 @@ export function usePasskey() {
       if (!optionsJSON) throw new Error("Nenhuma chave de acesso disponível.");
 
       const key = await startAuthentication({
-        optionsJSON: optionsJSON as never,
+        optionsJSON: preferBuiltInSensor(optionsJSON) as never,
       });
 
       const data = await core<{ passkeyLogin: PasskeyToken }>(PASSKEY_LOGIN, {
@@ -87,7 +107,9 @@ export function usePasskey() {
     const optionsJSON = optionsData.passkeyRegisterOptions;
     if (!optionsJSON) throw new Error("Não foi possível iniciar o registro da chave.");
 
-    const key = await startRegistration({ optionsJSON: optionsJSON as never });
+    const key = await startRegistration({
+      optionsJSON: preferBuiltInSensor(optionsJSON as Record<string, unknown>) as never,
+    });
 
     const data = await core<{ passkeyRegister: boolean }>(PASSKEY_REGISTER, {
       key,
