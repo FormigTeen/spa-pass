@@ -23,15 +23,16 @@ export function MobilePanelToggle({ onClick }: { onClick: () => void }) {
   return (
     <motion.button
       onClick={onClick}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 20 }}
-      transition={{ duration: 0.3 }}
-      whileTap={{ scale: 0.98 }}
-      className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 px-6 py-3 bg-white text-gray-900 rounded-full font-medium shadow-lg flex items-center gap-2"
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.8 }}
+      transition={{ type: "spring", stiffness: 300, damping: 25 }}
+      whileTap={{ scale: 0.94 }}
+      aria-label="Visualizar painel"
+      // Top left, out of the way of the composer and the thread.
+      className="fixed top-5 left-5 z-50 w-11 h-11 rounded-full bg-white text-gray-900 shadow-lg flex items-center justify-center"
     >
-      <ArrowLeft className="w-4 h-4" aria-hidden />
-      Visualizar painel
+      <ArrowLeft className="w-5 h-5" aria-hidden />
     </motion.button>
   );
 }

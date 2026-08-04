@@ -11,8 +11,12 @@ export function ChatTranscript({ messages }: { messages: ChatMessage[] }) {
   }, [messages]);
 
   return (
-    <div className="no-scrollbar h-full overflow-y-auto py-6 space-y-4">
-      <AnimatePresence initial={false}>
+    // The inner column is at least full height and packs to the end, so a
+    // short thread sits on the bottom edge and grows upward the way a chat
+    // is expected to, instead of hanging from the top.
+    <div className="no-scrollbar h-full overflow-y-auto">
+      <div className="min-h-full flex flex-col justify-end py-6 space-y-4">
+        <AnimatePresence initial={false}>
         {messages.map((message) => (
           <motion.div
             key={message.id}
@@ -37,8 +41,9 @@ export function ChatTranscript({ messages }: { messages: ChatMessage[] }) {
             </div>
           </motion.div>
         ))}
-      </AnimatePresence>
-      <div ref={bottom} />
+        </AnimatePresence>
+        <div ref={bottom} />
+      </div>
     </div>
   );
 }
