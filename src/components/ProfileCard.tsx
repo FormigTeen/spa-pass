@@ -21,8 +21,11 @@ export function ProfileCard({ enrolment }: { enrolment: Enrolment }) {
   if (!session) return null;
 
   const document = maskDocument(profile?.document ?? session.document);
-  // Declined earlier: the ask is gone, so this is the only way back in.
-  const canReconsider = enrolment.status === "dismissed";
+  // The proactive ask only fires for accounts with no key at all, so this is
+  // how any other device — a phone whose key lives on a laptop, or someone who
+  // said no earlier — still gets to enrol one of its own.
+  const canReconsider =
+    enrolment.status === "dismissed" || enrolment.status === "enrolled";
 
   return (
     <motion.section

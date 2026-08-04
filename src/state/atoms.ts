@@ -41,23 +41,6 @@ export const lastEmailAtom = atomWithStorage<string>(
   "",
 );
 
-/**
- * Emails that enrolled a passkey **on this device**.
- *
- * This is deliberately not the same question the gateway answers.
- * `allowCredentials` tells you the *account* owns a credential somewhere — on
- * a laptop, say — while a phone that never enrolled has nothing to sign with.
- * Prompting on the account-level answer makes the OS say "no passkey
- * available", so only this local list may trigger a prompt.
- */
-export const passkeyEmailsAtom = atomWithStorage<string[]>(
-  // Key bumped on purpose. An earlier build wrote the gateway's account-level
-  // answer here, so every device that ran it claims a key it may not hold.
-  // Reusing the old key would keep prompting those devices forever.
-  "passkey-poc:device-keys.v2",
-  [],
-);
-
 /** Emails that declined the enrolment upsell — do not nag them again. */
 export const enrolDismissedAtom = atomWithStorage<string[]>(
   "passkey-poc:enrol-dismissed",

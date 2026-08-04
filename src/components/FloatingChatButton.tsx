@@ -12,7 +12,7 @@ export function FloatingChatButton({ onClick }: { onClick: () => void }) {
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       aria-label="Abrir chat"
-      className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-brand rounded-full flex items-center justify-center shadow-lg shadow-black/40"
+      className="fixed right-6 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-50 w-14 h-14 bg-brand rounded-full flex items-center justify-center shadow-lg shadow-black/40"
     >
       <MessageCircle className="w-6 h-6 text-cream" aria-hidden />
     </motion.button>
@@ -30,7 +30,7 @@ export function MobilePanelToggle({ onClick }: { onClick: () => void }) {
       whileTap={{ scale: 0.94 }}
       aria-label="Visualizar painel"
       // Top left, out of the way of the composer and the thread.
-      className="fixed top-5 left-5 z-50 w-11 h-11 rounded-full bg-cream text-ink shadow-lg flex items-center justify-center"
+      className="fixed left-5 top-[calc(1.25rem+env(safe-area-inset-top))] z-50 w-11 h-11 rounded-full bg-cream text-ink shadow-lg flex items-center justify-center"
     >
       <ArrowLeft className="w-5 h-5" aria-hidden />
     </motion.button>

@@ -16,7 +16,7 @@ export function AppLayout() {
 
   if (!isMobile) {
     return (
-      <div className="w-screen h-screen overflow-hidden flex">
+      <div className="w-full h-dvh overflow-hidden flex">
         <div className="w-[60%] h-full">
           <WhitePanel />
         </div>
@@ -28,7 +28,7 @@ export function AppLayout() {
   }
 
   return (
-    <div className="w-screen h-screen overflow-hidden">
+    <div className="w-full h-dvh overflow-hidden">
       <AnimatePresence>
         {!chatOpen && (
           <motion.div
@@ -50,7 +50,7 @@ export function AppLayout() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 h-dvh z-40"
           >
             <RedPanel showComposer autoFocusComposer />
           </motion.div>

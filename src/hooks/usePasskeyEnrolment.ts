@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAtom, useAtomValue } from "jotai";
-import {
-  enrolDismissedAtom,
-  passkeyEmailsAtom,
-  sessionAtom,
-} from "../state/atoms";
+import { enrolDismissedAtom, sessionAtom } from "../state/atoms";
 import {
   isAlreadyRegistered,
   isUserCancellation,
@@ -35,9 +31,8 @@ export type EnrolmentStatus =
 export function usePasskeyEnrolment() {
   const session = useAtomValue(sessionAtom);
   const { data: profile, isFetched } = useProfile();
-  const [passkeyEmails, setPasskeyEmails] = useAtom(passkeyEmailsAtom);
   const [dismissed, setDismissed] = useAtom(enrolDismissedAtom);
-  const { enrolPasskey } = usePasskey();
+  const { hasPasskey, enrolPasskey } = usePasskey();
 
   const [status, setStatus] = useState<EnrolmentStatus>("checking");
   const [error, setError] = useState("");
@@ -51,9 +46,6 @@ export function usePasskeyEnrolment() {
     setError("");
     try {
       await enrolPasskey();
-      setPasskeyEmails((current) =>
-        current.includes(email) ? current : [...current, email],
-      );
       setStatus("enrolled");
     } catch (caught) {
       if (isUserCancellation(caught)) {
@@ -67,9 +59,6 @@ export function usePasskeyEnrolment() {
       // credential is exactly how "no passkey available" appears. Silence the
       // question instead.
       if (isAlreadyRegistered(caught)) {
-        setDismissed((current) =>
-          current.includes(email) ? current : [...current, email],
-        );
         setStatus("enrolled");
         setError("");
         return;
@@ -77,7 +66,7 @@ export function usePasskeyEnrolment() {
       setStatus("error");
       setError(passkeyErrorMessage(caught));
     }
-  }, [enrolPasskey, email, setPasskeyEmails]);
+  }, [enrolPasskey]);
 
   const dismiss = useCallback(() => {
     setDismissed((current) =>
@@ -98,17 +87,19 @@ export function usePasskeyEnrolment() {
 
     started.current = true;
 
-    // Enrolment is per device, not per account. The gateway would say "yes,
-    // there is a key" for a credential sitting on the user's laptop, which
-    // would leave a phone with no way to enrol one of its own.
-    if (passkeyEmails.includes(email)) {
-      setStatus("enrolled");
-      return;
-    }
-    setStatus(dismissed.includes(email) ? "dismissed" : "offer");
-    // `passkeyEmails` is read as a hint only; re-running on it would loop.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, isFetched, canEnrol, dismissed, email, passkeyEmails]);
+    // Only the gateway is consulted. Whether *this* device holds a key is
+    // unknowable, so the proactive ask is limited to accounts with no key at
+    // all; every other device reaches enrolment through the profile card.
+    void (async () => {
+      setStatus("checking");
+      const accountHasKey = await hasPasskey(email);
+      if (accountHasKey) {
+        setStatus("enrolled");
+        return;
+      }
+      setStatus(dismissed.includes(email) ? "dismissed" : "offer");
+    })();
+  }, [session, isFetched, canEnrol, dismissed, email, hasPasskey]);
 
   return { status, error, enrol, dismiss, canEnrol };
 }

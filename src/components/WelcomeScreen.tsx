@@ -26,7 +26,7 @@ export function WelcomeScreen() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.4 }}
-      className="w-full max-w-lg h-full flex flex-col justify-between pt-10 md:pt-14 pb-6 md:pb-14 gap-8"
+      className="w-full max-w-lg h-full flex flex-col justify-between pt-10 md:pt-14 pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:pb-14 gap-8"
     >
       {/* Top — who is signed in, and the passkey upsell. */}
       <div className="space-y-3">

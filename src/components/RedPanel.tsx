@@ -49,7 +49,7 @@ export function RedPanel({
       )}
 
       {authenticated && showComposer && (
-        <div className="pb-8 pt-4">
+        <div className="pt-4 pb-[calc(2rem+env(safe-area-inset-bottom))]">
           <ChatComposer
             onSend={(message) => void send(message)}
             disabled={busy}

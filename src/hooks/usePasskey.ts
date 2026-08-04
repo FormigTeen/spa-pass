@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import {
   browserSupportsWebAuthn,
+  browserSupportsWebAuthnAutofill,
   platformAuthenticatorIsAvailable,
   startAuthentication,
   startRegistration,
@@ -90,6 +91,37 @@ export function usePasskey() {
     [loginOptions],
   );
 
+  /**
+   * Conditional mediation: the passkey is offered inside the email field's
+   * autofill list, and only when the browser actually holds a matching
+   * credential. Nothing pops up otherwise, so a device that has no key never
+   * sees "no passkey available".
+   *
+   * The promise stays pending until the user picks the passkey — or forever,
+   * if they just type instead. `WebAuthnAbortService` inside the library
+   * cancels it as soon as any other WebAuthn call starts.
+   */
+  const conditionalLogin = useCallback(
+    async (email: string): Promise<PasskeyToken | null> => {
+      if (!(await browserSupportsWebAuthnAutofill().catch(() => false))) return null;
+
+      const optionsJSON = await loginOptions(email).catch(() => null);
+      if (!optionsJSON?.allowCredentials?.length) return null;
+
+      const key = await startAuthentication({
+        optionsJSON: optionsJSON as never,
+        useBrowserAutofill: true,
+      });
+
+      const data = await core<{ passkeyLogin: PasskeyToken }>(PASSKEY_LOGIN, {
+        email,
+        key,
+      });
+      return data.passkeyLogin ?? null;
+    },
+    [loginOptions],
+  );
+
   /** Requires the gateway session cookie — enrolment is bound to the logged in user. */
   const enrolPasskey = useCallback(async () => {
     const optionsData = await core<{ passkeyRegisterOptions: object }>(
@@ -110,5 +142,11 @@ export function usePasskey() {
     return true;
   }, []);
 
-  return { hasPasskey, loginWithPasskey, enrolPasskey, loginOptions };
+  return {
+    hasPasskey,
+    loginWithPasskey,
+    conditionalLogin,
+    enrolPasskey,
+    loginOptions,
+  };
 }

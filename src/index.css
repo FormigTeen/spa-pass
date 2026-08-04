@@ -22,9 +22,18 @@
 }
 
 html,
-body,
-#root {
+body {
   height: 100%;
+}
+
+/**
+ * `100vh` on mobile is the viewport with the browser chrome hidden, so a
+ * full-height layout slides underneath the address and navigation bars —
+ * which is how the sign-out button ended up behind the system buttons.
+ * `dvh` tracks the chrome as it comes and goes.
+ */
+#root {
+  height: 100dvh;
 }
 
 body {
