@@ -33,8 +33,8 @@ export function ChatTranscript({ messages }: { messages: ChatMessage[] }) {
               className={cn(
                 "max-w-[85%] rounded-2xl px-4 py-3 text-[15px] leading-relaxed",
                 message.role === "user"
-                  ? "bg-white text-gray-900 rounded-br-md"
-                  : "bg-white/10 text-white rounded-bl-md",
+                  ? "bg-ink text-cream rounded-br-md"
+                  : "bg-brand-deep text-cream rounded-bl-md",
               )}
             >
               {message.pending ? <TypingDots /> : message.content}
@@ -54,7 +54,7 @@ function TypingDots() {
       {[0, 1, 2].map((index) => (
         <motion.span
           key={index}
-          className="w-1.5 h-1.5 rounded-full bg-white/70"
+          className="w-1.5 h-1.5 rounded-full bg-cream/70"
           animate={{ opacity: [0.3, 1, 0.3] }}
           transition={{
             duration: 1.1,

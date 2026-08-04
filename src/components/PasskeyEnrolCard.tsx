@@ -24,7 +24,7 @@ export function PasskeyEnrolCard({ enrolment }: { enrolment: Enrolment }) {
           aria-live="polite"
           className="w-full overflow-hidden"
         >
-          <div className="rounded-2xl border border-gray-900/10 bg-gray-900 text-white p-5">
+          <div className="rounded-2xl border border-cream/15 bg-brand text-cream p-5">
             <div className="flex items-start gap-4">
               <motion.div
                 animate={
@@ -36,7 +36,7 @@ export function PasskeyEnrolCard({ enrolment }: { enrolment: Enrolment }) {
                   duration: 1.4,
                   repeat: status === "prompting" ? Infinity : 0,
                 }}
-                className="w-11 h-11 shrink-0 rounded-full bg-white/10 flex items-center justify-center"
+                className="w-11 h-11 shrink-0 rounded-full bg-cream/15 flex items-center justify-center"
               >
                 <Fingerprint className="w-5 h-5" aria-hidden />
               </motion.div>
@@ -47,7 +47,7 @@ export function PasskeyEnrolCard({ enrolment }: { enrolment: Enrolment }) {
                     ? "Confirme no seu dispositivo"
                     : "Quer entrar com a digital da próxima vez?"}
                 </p>
-                <p className="mt-1 text-sm text-white/70 leading-relaxed">
+                <p className="mt-1 text-sm text-cream/70 leading-relaxed">
                   {status === "prompting"
                     ? "Estamos criando sua chave de acesso neste dispositivo."
                     : "Registramos uma chave de acesso neste aparelho e você entra sem esperar código no email."}
@@ -64,14 +64,14 @@ export function PasskeyEnrolCard({ enrolment }: { enrolment: Enrolment }) {
                     <button
                       type="button"
                       onClick={() => void enrol()}
-                      className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-900 hover:bg-white/90 transition-colors"
+                      className="rounded-lg bg-cream px-4 py-2 text-sm font-medium text-ink hover:bg-cream/90 transition-colors"
                     >
                       {status === "error" ? "Tentar de novo" : "Sim, registrar"}
                     </button>
                     <button
                       type="button"
                       onClick={dismiss}
-                      className="text-sm text-white/60 hover:text-white transition-colors"
+                      className="text-sm text-cream/60 hover:text-cream transition-colors"
                     >
                       Agora não
                     </button>
@@ -79,7 +79,7 @@ export function PasskeyEnrolCard({ enrolment }: { enrolment: Enrolment }) {
                 )}
 
                 {status === "prompting" && (
-                  <p className="mt-4 inline-flex items-center gap-2 text-sm text-white/70">
+                  <p className="mt-4 inline-flex items-center gap-2 text-sm text-cream/70">
                     <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
                     Aguardando o sensor...
                   </p>

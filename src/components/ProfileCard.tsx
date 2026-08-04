@@ -30,18 +30,18 @@ export function ProfileCard({ enrolment }: { enrolment: Enrolment }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       aria-label="Dados do usuário"
-      className="w-full rounded-2xl border border-gray-200 bg-white/80 backdrop-blur p-5 shadow-sm"
+      className="w-full rounded-2xl border border-cream/10 bg-cream/5 p-5"
     >
       <div className="flex items-start gap-4">
-        <div className="w-11 h-11 shrink-0 rounded-full bg-gray-900 text-white flex items-center justify-center text-base font-medium uppercase">
+        <div className="w-11 h-11 shrink-0 rounded-full bg-cream/10 text-cream flex items-center justify-center text-base font-medium uppercase">
           {session.email.slice(0, 2)}
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-gray-900 truncate">
+          <p className="text-sm font-medium text-cream truncate">
             {session.email}
           </p>
-          <p className="mt-0.5 text-xs text-gray-500">
+          <p className="mt-0.5 text-xs text-cream/50">
             {document ? `Documento ${document}` : "Sessão ativa"}
           </p>
 
@@ -54,7 +54,7 @@ export function ProfileCard({ enrolment }: { enrolment: Enrolment }) {
             <button
               type="button"
               onClick={() => void enrolment.enrol()}
-              className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-gray-900 px-2.5 py-1 text-[11px] font-medium text-gray-900 transition-colors hover:bg-gray-900 hover:text-white"
+              className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-cream/40 px-2.5 py-1 text-[11px] font-medium text-cream transition-colors hover:bg-cream hover:text-ink"
             >
               <Fingerprint className="w-3.5 h-3.5" aria-hidden />
               Registrar digital

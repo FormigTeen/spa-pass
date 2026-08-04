@@ -88,12 +88,12 @@ export function LoginStepCode() {
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       className="w-full max-w-md"
     >
-      <h1 className="text-4xl md:text-5xl font-medium text-gray-900 tracking-tight text-balance">
+      <h1 className="text-4xl md:text-5xl font-medium text-cream tracking-tight text-balance">
         Verifique seu email
       </h1>
-      <p className="mt-4 text-lg text-gray-500 leading-relaxed">
+      <p className="mt-4 text-lg text-cream/60 leading-relaxed">
         Enviamos um código de {LENGTH} dígitos para{" "}
-        <span className="text-gray-900 font-medium">{email}</span>
+        <span className="text-cream font-medium">{email}</span>
       </p>
 
       <div className="mt-10 flex gap-2 md:gap-3 justify-center">
@@ -118,24 +118,24 @@ export function LoginStepCode() {
             transition={{ delay: index * 0.05, duration: 0.3 }}
             className={cn(
               "w-12 h-14 md:w-14 md:h-16 text-center text-2xl font-medium",
-              "border-2 rounded-xl bg-white transition-all duration-200 outline-none",
-              "focus:border-gray-900 focus:ring-4 focus:ring-gray-100",
+              "border-2 rounded-xl bg-transparent text-cream transition-all duration-200 outline-none",
+              "focus:border-cream focus:ring-4 focus:ring-cream/10",
               "disabled:opacity-60",
-              digit ? "border-gray-900 bg-gray-50" : "border-gray-200",
+              digit ? "border-cream bg-cream/5" : "border-cream/20",
             )}
           />
         ))}
       </div>
 
       {busy && (
-        <p className="mt-6 text-sm text-gray-500 flex items-center justify-center gap-2">
+        <p className="mt-6 text-sm text-cream/60 flex items-center justify-center gap-2">
           <Loader2 className="w-4 h-4 animate-spin" aria-hidden />
           Verificando...
         </p>
       )}
 
       {error && (
-        <p role="alert" className="mt-6 text-sm text-red-600 text-center">
+        <p role="alert" className="mt-6 text-sm text-red-300 text-center">
           {error}
         </p>
       )}
@@ -144,7 +144,7 @@ export function LoginStepCode() {
         <button
           type="button"
           onClick={() => setStep("email")}
-          className="text-gray-500 hover:text-gray-900 transition-colors"
+          className="text-cream/60 hover:text-cream transition-colors"
         >
           Trocar email
         </button>
@@ -152,7 +152,7 @@ export function LoginStepCode() {
           type="button"
           disabled={requestCode.isPending}
           onClick={() => void requestCode.mutateAsync(email).catch(() => null)}
-          className="text-gray-500 hover:text-gray-900 transition-colors disabled:opacity-50"
+          className="text-cream/60 hover:text-cream transition-colors disabled:opacity-50"
         >
           {requestCode.isPending ? "Reenviando..." : "Reenviar código"}
         </button>

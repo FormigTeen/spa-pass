@@ -89,10 +89,10 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       className="w-full max-w-md"
     >
-      <h1 className="text-4xl md:text-5xl font-medium text-gray-900 tracking-tight text-balance">
+      <h1 className="text-4xl md:text-5xl font-medium text-cream tracking-tight text-balance">
         Vamos começar
       </h1>
-      <p className="mt-4 text-lg text-gray-500 leading-relaxed">
+      <p className="mt-4 text-lg text-cream/60 leading-relaxed">
         Digite seu email para entrar na plataforma.
       </p>
 
@@ -118,14 +118,14 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
             autoFocus
             className={cn(
               "w-full px-0 py-4 text-lg bg-transparent border-0 border-b-2",
-              "transition-colors duration-300 outline-none placeholder:text-gray-300",
-              focused || email ? "border-gray-900" : "border-gray-200",
+              "transition-colors duration-300 outline-none placeholder:text-cream/25 text-cream",
+              focused || email ? "border-cream" : "border-cream/20",
             )}
           />
         </div>
 
         {error && (
-          <p role="alert" className="mt-4 text-sm text-red-600">
+          <p role="alert" className="mt-4 text-sm text-red-300">
             {error}
           </p>
         )}
@@ -138,8 +138,8 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
             "mt-8 w-full py-4 px-6 rounded-xl text-base font-medium",
             "flex items-center justify-center gap-2 transition-all duration-300",
             isValid && !requestCode.isPending
-              ? "bg-gray-900 text-white hover:bg-gray-800"
-              : "bg-gray-100 text-gray-400 cursor-not-allowed",
+              ? "bg-cream text-ink hover:bg-cream/90"
+              : "bg-cream/10 text-cream/35 cursor-not-allowed",
           )}
         >
           {requestCode.isPending && (
@@ -155,7 +155,7 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
           onClick={gate.retry}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="mt-4 w-full py-4 px-6 rounded-xl border-2 border-gray-200 text-gray-900 font-medium flex items-center justify-center gap-2 hover:border-gray-900 transition-colors"
+          className="mt-4 w-full py-4 px-6 rounded-xl border-2 border-cream/20 text-cream font-medium flex items-center justify-center gap-2 hover:border-cream transition-colors"
         >
           <Fingerprint className="w-5 h-5" aria-hidden />
           Entrar com biometria
@@ -163,7 +163,7 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
       )}
 
       {gate.error && (
-        <p role="alert" className="mt-4 text-sm text-red-600">
+        <p role="alert" className="mt-4 text-sm text-red-300">
           {gate.error}
         </p>
       )}

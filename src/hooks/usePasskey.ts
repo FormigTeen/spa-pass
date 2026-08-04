@@ -42,26 +42,6 @@ export const passkeyErrorMessage = (error: unknown) => {
 
 export const supportsPasskey = () => browserSupportsWebAuthn();
 
-/**
- * Authentication has no `authenticatorSelection` — sending it there does
- * nothing. What pulls up the QR sheet is the `hybrid` transport the gateway
- * advertises, so the automatic path keeps only the local ones. The explicit
- * button leaves them untouched, since scanning from another device is a
- * reasonable thing to choose on purpose.
- */
-const preferLocalCredential = (options: AuthOptions, localOnly: boolean) => {
-  const allowCredentials = Array.isArray(options.allowCredentials)
-    ? options.allowCredentials.map((credential) => {
-        const item = credential as { transports?: string[] };
-        if (!localOnly || !Array.isArray(item.transports)) return credential;
-        const transports = item.transports.filter((t) => t === "internal");
-        return { ...item, transports: transports.length ? transports : item.transports };
-      })
-    : options.allowCredentials;
-
-  return { ...options, allowCredentials, hints: ["client-device"] };
-};
-
 export const supportsPlatformAuthenticator = () =>
   platformAuthenticatorIsAvailable().catch(() => false);
 
@@ -90,18 +70,14 @@ export function usePasskey() {
   );
 
   const loginWithPasskey = useCallback(
-    async (
-      email: string,
-      preloaded?: AuthOptions | null,
-      localOnly = false,
-    ): Promise<PasskeyToken> => {
+    async (email: string, preloaded?: AuthOptions | null): Promise<PasskeyToken> => {
       // Reuse the options from the "has a key?" probe so the challenge the
       // authenticator signs is the one the gateway is still holding.
       const optionsJSON = preloaded ?? (await loginOptions(email));
       if (!optionsJSON) throw new Error("Nenhuma chave de acesso disponível.");
 
       const key = await startAuthentication({
-        optionsJSON: preferLocalCredential(optionsJSON, localOnly) as never,
+        optionsJSON: optionsJSON as never,
       });
 
       const data = await core<{ passkeyLogin: PasskeyToken }>(PASSKEY_LOGIN, {

@@ -44,9 +44,9 @@ export function ChatComposer({
     >
       <div
         className={cn(
-          "flex items-center gap-3 rounded-xl bg-white/10 backdrop-blur-sm px-4 py-3",
+          "flex items-center gap-3 rounded-xl bg-brand-deep px-4 py-3",
           "transition-all duration-300",
-          focused && "bg-white/15 ring-2 ring-white/20",
+          focused && "ring-2 ring-cream/25",
         )}
       >
         <input
@@ -58,7 +58,7 @@ export function ChatComposer({
           onBlur={() => setFocused(false)}
           placeholder="Digite sua mensagem..."
           aria-label="Mensagem para o agente"
-          className="flex-1 bg-transparent text-white placeholder:text-white/40 outline-none text-base"
+          className="flex-1 bg-transparent text-cream placeholder:text-cream/40 outline-none text-base"
         />
         <motion.button
           type="submit"
@@ -68,8 +68,8 @@ export function ChatComposer({
           className={cn(
             "p-2 rounded-lg transition-all duration-200",
             ready
-              ? "bg-white text-brand hover:bg-white/90"
-              : "bg-white/10 text-white/40 cursor-not-allowed",
+              ? "bg-cream text-brand hover:bg-cream/90"
+              : "bg-cream/10 text-cream/40 cursor-not-allowed",
           )}
         >
           <Send className="w-5 h-5" aria-hidden />

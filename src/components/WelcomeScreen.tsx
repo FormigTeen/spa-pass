@@ -26,7 +26,7 @@ export function WelcomeScreen() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.4 }}
-      className="w-full max-w-lg h-full flex flex-col justify-between py-10 md:py-14 gap-8"
+      className="w-full max-w-lg h-full flex flex-col justify-between pt-10 md:pt-14 pb-6 md:pb-14 gap-8"
     >
       {/* Top — who is signed in, and the passkey upsell. */}
       <div className="space-y-3">
@@ -40,7 +40,7 @@ export function WelcomeScreen() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.15, duration: 0.4 }}
-          className="text-4xl md:text-5xl lg:text-6xl font-medium text-gray-900 tracking-tight block"
+          className="text-4xl md:text-5xl lg:text-6xl font-medium text-cream tracking-tight block"
         >
           Bem-vindo,
         </motion.span>
@@ -48,18 +48,19 @@ export function WelcomeScreen() {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35, duration: 0.5 }}
-          className="mt-2 text-3xl md:text-4xl lg:text-5xl font-medium text-gray-900 tracking-tight block break-words"
+          className="mt-2 text-3xl md:text-4xl lg:text-5xl font-medium text-cream tracking-tight block break-words"
         >
           {name}!
         </motion.span>
       </div>
 
-      {/* Bottom — leave. */}
-      <div>
+      {/* Bottom — leave. The 56px row matches the floating chat button, so
+          on mobile both sit on the same horizontal line. */}
+      <div className="flex items-center h-14 md:h-auto">
         <button
           type="button"
           onClick={signOut}
-          className="inline-flex items-center gap-2 rounded-xl border-2 border-gray-200 px-5 py-3 text-sm font-medium text-gray-600 hover:border-gray-900 hover:text-gray-900 transition-colors"
+          className="inline-flex items-center gap-2 rounded-xl border-2 border-cream/20 px-5 py-3 text-sm font-medium text-cream/70 hover:border-cream hover:text-cream transition-colors"
         >
           <LogOut className="w-4 h-4" aria-hidden />
           Sair da conta

@@ -27,23 +27,23 @@ export function PasskeyGateScreen({ gate }: { gate: PasskeyGate }) {
               : { scale: 1, opacity: 1 }
           }
           transition={{ duration: 1.6, repeat: prompting || linking ? Infinity : 0 }}
-          className="w-20 h-20 rounded-3xl bg-gray-900 flex items-center justify-center"
+          className="w-20 h-20 rounded-3xl bg-cream/10 flex items-center justify-center"
         >
-          <Fingerprint className="w-10 h-10 text-white" aria-hidden />
+          <Fingerprint className="w-10 h-10 text-cream" aria-hidden />
         </motion.div>
       </div>
 
-      <h1 className="mt-8 text-3xl md:text-4xl font-medium text-gray-900 tracking-tight">
+      <h1 className="mt-8 text-3xl md:text-4xl font-medium text-cream tracking-tight">
         {linking ? "Quase lá..." : "Confirme que é você"}
       </h1>
 
-      <p className="mt-4 text-lg text-gray-500 leading-relaxed">
+      <p className="mt-4 text-lg text-cream/60 leading-relaxed">
         {linking ? (
           "Estamos abrindo sua sessão."
         ) : (
           <>
             Use a biometria deste dispositivo para entrar como{" "}
-            <span className="text-gray-900 font-medium">{gate.email}</span>.
+            <span className="text-cream font-medium">{gate.email}</span>.
           </>
         )}
       </p>
@@ -52,7 +52,7 @@ export function PasskeyGateScreen({ gate }: { gate: PasskeyGate }) {
       <button
         type="button"
         onClick={gate.skip}
-        className="mt-10 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+        className="mt-10 text-sm text-cream/60 hover:text-cream transition-colors"
       >
         Usar outro método
       </button>

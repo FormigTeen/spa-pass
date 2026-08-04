@@ -23,7 +23,7 @@ export function WhitePanel() {
   };
 
   return (
-    <div className="h-full w-full bg-white flex items-center justify-center px-8 md:px-12 lg:px-16">
+    <div className="h-full w-full bg-ink flex items-center justify-center px-8 md:px-12 lg:px-16">
       <AnimatePresence mode="wait">{content()}</AnimatePresence>
     </div>
   );

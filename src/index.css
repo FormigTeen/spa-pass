@@ -1,8 +1,15 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand: #ff0000;
-  --color-brand-dark: #d40000;
+  /* Deep crimson panel. */
+  --color-brand: #960014;
+  /* Surfaces sitting on the crimson — bubbles, composer. */
+  --color-brand-deep: #840415;
+  /* Warm charcoal: the app's dark surface. */
+  --color-ink: #1d1c19;
+  --color-ink-soft: #262420;
+  /* Warm off-white, the primary text colour on both panels. */
+  --color-cream: #faecc7;
 }
 
 :root {
@@ -23,8 +30,8 @@ body,
 body {
   margin: 0;
   overflow: hidden;
-  background: #fff;
-  color: #111827;
+  background: var(--color-ink);
+  color: var(--color-cream);
 }
 
 /**
@@ -44,8 +51,8 @@ body {
 input:-webkit-autofill {
   animation-name: onAutoFillStart;
   animation-duration: 1ms;
-  /* Autofill's yellow wash would fight the flat design. */
-  -webkit-text-fill-color: #111827;
+  /* Autofill's yellow wash would fight the dark surface. */
+  -webkit-text-fill-color: var(--color-cream);
   transition: background-color 600000s 0s;
 }
 

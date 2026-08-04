@@ -61,10 +61,13 @@ export function usePasskeyEnrolment() {
         setError("");
         return;
       }
-      // A synced passkey the device can already reach: nothing to create, and
-      // nothing is broken — record it so we stop asking.
+      // A synced passkey the account already owns: nothing was created here,
+      // so this device must NOT join the enrolled list — that list is what
+      // authorises the automatic prompt, and prompting a device that holds no
+      // credential is exactly how "no passkey available" appears. Silence the
+      // question instead.
       if (isAlreadyRegistered(caught)) {
-        setPasskeyEmails((current) =>
+        setDismissed((current) =>
           current.includes(email) ? current : [...current, email],
         );
         setStatus("enrolled");

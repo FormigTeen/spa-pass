@@ -40,8 +40,8 @@ export function RedPanel({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
           >
-            <Sparkles className="w-6 h-6 text-white/60 mb-5" aria-hidden />
-            <p className="text-white/95 text-lg md:text-xl leading-relaxed font-light">
+            <Sparkles className="w-6 h-6 text-cream/50 mb-5" aria-hidden />
+            <p className="text-cream/95 text-lg md:text-xl leading-relaxed font-light">
               {authenticated ? READY : GREETING}
             </p>
           </motion.div>
