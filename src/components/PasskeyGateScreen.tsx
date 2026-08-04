@@ -3,8 +3,9 @@ import { Fingerprint } from "lucide-react";
 import type { PasskeyGate } from "../hooks/useAutoPasskeyLogin";
 
 /**
- * Shown while the returning-user passkey attempt is in flight, so the OS sheet
- * never appears over a bare login form with no explanation.
+ * Only shown once the OS sheet is actually up (or right after it succeeds), so
+ * the biometric prompt has context behind it. The preceding lookup stays
+ * invisible — it is a background request, not something worth a screen.
  */
 export function PasskeyGateScreen({ gate }: { gate: PasskeyGate }) {
   const prompting = gate.status === "prompting";
@@ -33,23 +34,17 @@ export function PasskeyGateScreen({ gate }: { gate: PasskeyGate }) {
       </div>
 
       <h1 className="mt-8 text-3xl md:text-4xl font-medium text-gray-900 tracking-tight">
-        {linking
-          ? "Quase lá..."
-          : prompting
-            ? "Confirme que é você"
-            : "Procurando sua chave..."}
+        {linking ? "Quase lá..." : "Confirme que é você"}
       </h1>
 
       <p className="mt-4 text-lg text-gray-500 leading-relaxed">
         {linking ? (
           "Estamos abrindo sua sessão."
-        ) : prompting ? (
+        ) : (
           <>
             Use a biometria deste dispositivo para entrar como{" "}
             <span className="text-gray-900 font-medium">{gate.email}</span>.
           </>
-        ) : (
-          "Verificando se você já tem uma chave de acesso salva."
         )}
       </p>
 

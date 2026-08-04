@@ -14,11 +14,9 @@ export function WhitePanel() {
 
   const content = () => {
     if (authenticated) return <WelcomeScreen key="welcome" />;
-    if (
-      gate.status === "checking" ||
-      gate.status === "prompting" ||
-      gate.status === "linking"
-    )
+    // `checking` is a background request — it must not take the screen. The
+    // form stays up, and if there is nothing to prompt the user never notices.
+    if (gate.status === "prompting" || gate.status === "linking")
       return <PasskeyGateScreen key="gate" gate={gate} />;
     if (step === "code") return <LoginStepCode key="code" />;
     return <LoginStepEmail key="email" gate={gate} />;
