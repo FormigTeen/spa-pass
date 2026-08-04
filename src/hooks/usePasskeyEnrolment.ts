@@ -24,20 +24,16 @@ export type EnrolmentStatus =
   | "hidden"; // unsupported, or not eligible to enrol at all
 
 /**
- * Requirement: once signed in, if the account has no passkey on this device we
- * *ask* whether to enrol. The OS sheet only opens after the user says yes —
- * an unprompted biometric sheet reads as something going wrong.
- *
- * Enrolment is only possible on a cookie session: `passkeyRegisterOptions`
- * resolves the user from the gateway session, so a passkey-only session (which
- * returns a Firebase token and sets no cookie) cannot enrol.
+ * After signing in, checks whether the account already has a passkey and
+ * offers to create one when it does not. Enrolment needs the gateway session
+ * cookie, so a passkey-only session cannot enrol.
  */
 export function usePasskeyEnrolment() {
   const session = useAtomValue(sessionAtom);
   const { data: profile, isFetched } = useProfile();
   const [dismissed, setDismissed] = useAtom(enrolDismissedAtom);
   const [deviceEnrolled, setDeviceEnrolled] = useAtom(deviceEnrolledAtom);
-  const { enrolPasskey, registerOptions } = usePasskey();
+  const { enrolPasskey, hasPasskey } = usePasskey();
 
   const [status, setStatus] = useState<EnrolmentStatus>("checking");
   const [error, setError] = useState("");
@@ -67,9 +63,6 @@ export function usePasskeyEnrolment() {
         setError("");
         return;
       }
-      // Refused via `excludeCredentials`: this device can already reach a key
-      // for the account. That refusal is the only moment WebAuthn reveals it,
-      // so record it and stop offering.
       if (isAlreadyRegistered(caught)) {
         remember();
         setStatus("enrolled");
@@ -91,8 +84,6 @@ export function usePasskeyEnrolment() {
   useEffect(() => {
     if (started.current || !session || !isFetched) return;
 
-    // `hidden` is only for "enrolment is impossible here". Declining is a
-    // separate state, so the profile card can still offer a way back.
     if (!supportsPasskey() || !canEnrol) {
       setStatus("hidden");
       return;
@@ -100,8 +91,6 @@ export function usePasskeyEnrolment() {
 
     started.current = true;
 
-    // Local hint first so the card does not flash for a device that already
-    // knows, then the authoritative answer.
     if (deviceEnrolled.includes(email)) {
       setStatus("enrolled");
       return;
@@ -109,16 +98,13 @@ export function usePasskeyEnrolment() {
 
     void (async () => {
       setStatus("checking");
-      const options = await registerOptions().catch(() => null);
-
-      // The account already has a key somewhere: never offer to create another.
-      if ((options?.excludeCredentials?.length ?? 0) > 0) {
+      if (await hasPasskey(email)) {
         setStatus("enrolled");
         return;
       }
       setStatus(dismissed.includes(email) ? "dismissed" : "offer");
     })();
-  }, [session, isFetched, canEnrol, dismissed, deviceEnrolled, email, registerOptions]);
+  }, [session, isFetched, canEnrol, dismissed, deviceEnrolled, email, hasPasskey]);
 
   return {
     status,

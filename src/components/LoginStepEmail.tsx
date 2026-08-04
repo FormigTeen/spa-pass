@@ -12,22 +12,17 @@ import { Loader2 } from "lucide-react";
 import { draftEmailAtom, lastEmailAtom, loginStepAtom } from "../state/atoms";
 import { useEmailCodeAuth } from "../hooks/useAuth";
 import { gatewayErrorMessage } from "../lib/gateway";
+import { cn } from "../lib/cn";
+import type { PasskeyGate } from "../hooks/useAutoPasskeyLogin";
 
-/**
- * The gateway answers a blocked address with a bare "Request failed with
- * status code 401", which tells the person nothing and looks like a bug. Too
- * many attempts is the common cause, so say that and leave the rest generic.
- */
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const codeRequestMessage = (error: unknown) => {
   const raw = gatewayErrorMessage(error, "");
   if (/401|403|blocked|bloquead/i.test(raw))
     return "Não foi possível enviar o código agora. Isso costuma acontecer após várias tentativas seguidas — aguarde alguns minutos e tente de novo.";
   return "Não foi possível enviar o código. Tente novamente em instantes.";
 };
-import { cn } from "../lib/cn";
-import type { PasskeyGate } from "../hooks/useAutoPasskeyLogin";
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
   const [email, setEmail] = useAtom(draftEmailAtom);
@@ -35,6 +30,7 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
   const [, setStep] = useAtom(loginStepAtom);
   const [focused, setFocused] = useState(false);
   const [error, setError] = useState("");
+  const [authenticating, setAuthenticating] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { requestCode } = useEmailCodeAuth();
 
@@ -43,20 +39,9 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
     if (!email && lastEmail) setEmail(lastEmail);
   }, [email, lastEmail, setEmail]);
 
-  // Arm the offer from here: the browser needs this input present for the
-  // whole call. Re-armed as the address changes, so what the dropdown offers
-  // always belongs to the email on screen.
-  useEffect(() => {
-    const target = EMAIL_PATTERN.test(email) ? email : lastEmail;
-    if (target) gate.startConditional(target);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [email, lastEmail]);
-
   const isValid = EMAIL_PATTERN.test(email);
-  const busy = requestCode.isPending;
+  const busy = authenticating || requestCode.isPending;
 
-  // Autofill only fills. Conditional mediation already offers the passkey in
-  // the same dropdown, so raising a sheet on top of it would compete with it.
   const handleAutofill = useCallback(
     (value: string) => {
       if (!value || value === email) return;
@@ -81,17 +66,19 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
 
   const handleBlur = () => setFocused(false);
 
-  /**
-   * Straight to the emailed code. The key is never tried from here: a modal
-   * ceremony always shows something, so an address without one would be met
-   * with "no passkeys registered" before its code arrived. The offer lives in
-   * the field's own autofill list instead, where the browser shows it only
-   * when it holds a key and stays quiet otherwise.
-   */
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!isValid || busy) return;
     setError("");
+
+    setAuthenticating(true);
+    const outcome = await gate.attempt(email);
+    setAuthenticating(false);
+
+    if (outcome === "signed-in") return;
+    // Only an account without a key falls through to the code; a cancelled or
+    // failed prompt stays put so the message is not swept away.
+    if (outcome === "failed") return;
 
     try {
       await requestCode.mutateAsync(email);
@@ -114,15 +101,6 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
       </h1>
       <p className="mt-4 text-lg text-cream/60 leading-relaxed">
         Digite seu email para entrar na plataforma.
-      </p>
-      {/*
-        The offer only ever appears in the field's autofill list, which is easy
-        to miss if nobody says so — someone with a key would otherwise press
-        Continue and wait for a code they did not need.
-      */}
-      <p className="mt-2 text-sm text-cream/40 leading-relaxed">
-        Já tem uma chave de acesso neste aparelho? Toque no campo abaixo para
-        entrar com ela.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-10">
@@ -172,7 +150,11 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
           )}
         >
           {busy && <Loader2 className="w-4 h-4 animate-spin" aria-hidden />}
-          {busy ? "Enviando código..." : "Continuar"}
+          {authenticating
+            ? "Verificando..."
+            : requestCode.isPending
+              ? "Enviando código..."
+              : "Continuar"}
         </motion.button>
       </form>
 

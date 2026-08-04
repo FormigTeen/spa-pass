@@ -1,23 +1,3 @@
-/**
- * The gateway resolves the user from any cookie whose name contains
- * `VtexIdclientAutCookie` (it is suffixed per account).
- *
- * ⚠️ This CANNOT clear the gateway's own session cookie, verified against the
- * live gateway. `VtexIdclientAutCookie_lebiscuit` comes back as:
- *
- *     domain: api-gateway.cvlb.tech   (host-only, not .cvlb.tech)
- *     httpOnly: true
- *
- * Two independent blockers: `httpOnly` puts it out of reach of
- * `document.cookie` entirely, and even without that, a page may only write
- * cookies for its own host or a *parent* domain — never a sibling subdomain
- * like `api-gateway.cvlb.tech`. That holds in production too.
- *
- * Kept as a best effort for any first-party, non-httpOnly auth cookie. The
- * gateway's own cookie needs the gateway to expire it
- * (`Set-Cookie: ...; Max-Age=0`); until then `signedOutAtom` is what actually
- * drops the session in the tab.
- */
 const AUTH_COOKIE = "VtexIdclientAutCookie";
 
 /**

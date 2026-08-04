@@ -91,39 +91,14 @@ email.
 
 ## Fluxos
 
-**Usuário recorrente (`useAutoPasskeyLogin`)** — via **mediação condicional**:
-a passkey aparece na lista de autofill do campo de email, e só se o navegador
-realmente tiver uma. Nada é disparado por conta própria.
+**Login** — o `Continuar` pede `passkeyLoginOptions(email)`. O gateway recusa
+quando a conta não tem chave, e aí o fluxo segue para o código. Tendo chave, o
+prompt do sistema abre e a autenticação acontece — é o mesmo desenho do
+[webauthn.io](https://webauthn.io).
 
-Isso não é detalhe de implementação. Não existe API para perguntar "este
-aparelho tem a credencial X?" — enumerar credenciais seria fingerprinting — e o
-gateway responde pela **conta**, não pelo aparelho. Um celular pode não ter nada
-enquanto a chave da conta está no notebook. Manter esse palpite no storage foi a
-origem de todos os bugs desta área: modal abrindo sozinho, QR no desktop,
-"nenhuma chave disponível" ao sair. A mediação condicional entrega a decisão a
-quem consegue tomá-la, e o modo de falha vira silêncio.
-
-**O `Continuar` vai direto para o código.** A chave nunca passa por ele, e o
-motivo é uma limitação real: **não existe verificação silenciosa com prompt
-modal**. Um `navigator.credentials.get()` sem mediação condicional sempre
-mostra algo — o seletor, ou "nenhuma chave registrada". É proposital: uma
-chamada capaz de responder invisivelmente deixaria qualquer página descobrir
-quais credenciais o aparelho carrega.
-
-A mediação condicional é a única forma silenciosa. Quem decide se há chave é o
-navegador, que responde honestamente sem contar nada para a página: aparelho
-sem chave simplesmente não recebe sugestão.
-
-**Registro (`usePasskeyEnrolment`)** — o card só aparece quando a conta não tem
-**nenhuma** chave, e isso vem do `excludeCredentials` do
-`passkeyRegisterOptions` — autenticado e sobre a própria conta, então não
-reabre o oráculo que o login fechou. O sensor só abre no "Sim, registrar". Se o aparelho já alcança uma chave da conta, o servidor recusa
-via `excludeCredentials` — único momento em que o navegador revela isso — e o
-resultado fica gravado em `passkey-poc:device-enrolled`.
-
-Gravar **esse** dado é seguro, e a diferença importa: ele só **esconde a
-oferta**, nunca autoriza um prompt. Errar custa um card que não apareceu, não
-uma tela do SO falhando.
+**Registro** — depois do login por código, a mesma pergunta é feita:
+`passkeyLoginOptions` responde se a conta já tem chave. Não tendo, o card
+oferece criar uma, e o prompt só abre no "Sim, registrar".
 
 **Sair** — a mutation `signOut` do módulo `globals` expira os cookies
 `VtexIdclientAutCookie*` do lado do servidor.
