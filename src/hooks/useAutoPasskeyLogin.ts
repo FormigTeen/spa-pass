@@ -1,6 +1,5 @@
 import { useCallback, useRef, useState } from "react";
 import { useAtomValue } from "jotai";
-import { useQueryClient } from "@tanstack/react-query";
 import { lastEmailAtom } from "../state/atoms";
 import {
   isUserCancellation,
@@ -9,6 +8,7 @@ import {
   usePasskey,
   type PasskeyToken,
 } from "./usePasskey";
+import { useQueryClient } from "@tanstack/react-query";
 import { completeVtexFirebaseSession } from "../lib/vtexFirebaseSession";
 import { profileQueryKey } from "./useProfile";
 
@@ -61,7 +61,11 @@ export function useAutoPasskeyLogin(): PasskeyGate {
   const [error, setError] = useState("");
   const conditionalStarted = useRef(false);
 
-  /** Everything after the passkey itself: Firebase, then the VTEX session. */
+  /**
+   * Everything after the passkey itself: Firebase, then the VTEX session. It
+   * all happens in place, so the profile query becomes the source of truth and
+   * `useSessionBootstrap` opens the session.
+   */
   const finish = useCallback(
     async (token: PasskeyToken) => {
       setStatus("linking");
