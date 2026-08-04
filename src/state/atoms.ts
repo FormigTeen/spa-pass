@@ -51,7 +51,10 @@ export const lastEmailAtom = atomWithStorage<string>(
  * available", so only this local list may trigger a prompt.
  */
 export const passkeyEmailsAtom = atomWithStorage<string[]>(
-  "passkey-poc:passkey-emails",
+  // Key bumped on purpose. An earlier build wrote the gateway's account-level
+  // answer here, so every device that ran it claims a key it may not hold.
+  // Reusing the old key would keep prompting those devices forever.
+  "passkey-poc:device-keys.v2",
   [],
 );
 

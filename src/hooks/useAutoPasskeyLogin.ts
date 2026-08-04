@@ -115,7 +115,7 @@ export function useAutoPasskeyLogin(): PasskeyGate {
   );
 
   const prompt = useCallback(
-    async (email: string) => {
+    async (email: string, localOnly = false) => {
       setStatus("prompting");
       setError("");
 
@@ -125,7 +125,7 @@ export function useAutoPasskeyLogin(): PasskeyGate {
       pending.current = null;
 
       try {
-        const token = await loginWithPasskey(email, preloaded);
+        const token = await loginWithPasskey(email, preloaded, localOnly);
         rememberKey(email, true);
 
         // The passkey only proves who you are to Firebase. VTEX still has to
@@ -162,7 +162,7 @@ export function useAutoPasskeyLogin(): PasskeyGate {
         setStatus("idle");
         return;
       }
-      await prompt(email);
+      await prompt(email, true);
     },
     [probe, prompt],
   );
