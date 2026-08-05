@@ -37,7 +37,7 @@ export async function completeVtexFirebaseSession(customToken: string) {
   // allows that — verified on both gate.lebiscuit.com.br and the gateway.
   const response = await fetch(url, {
     method: "GET",
-    credentials: "include",
+    credentials: "omit",
     redirect: "follow",
     headers: { "X-Firebase-Authorization": authorization },
   });
