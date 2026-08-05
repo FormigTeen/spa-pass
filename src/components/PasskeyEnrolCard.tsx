@@ -7,8 +7,14 @@ type Enrolment = ReturnType<typeof usePasskeyEnrolment>;
 
 export function PasskeyEnrolCard({ enrolment }: { enrolment: Enrolment }) {
   const { status, error, enrol, dismiss } = enrolment;
-  const visible = status === "offer" || status === "prompting" || status === "error";
+  const visible =
+    status === "offer" ||
+    status === "prompting" ||
+    status === "enrolled" ||
+    status === "already-registered" ||
+    status === "error";
   const busy = status === "prompting";
+  const done = status === "enrolled" || status === "already-registered";
 
   return (
     <AnimatePresence>
@@ -27,7 +33,7 @@ export function PasskeyEnrolCard({ enrolment }: { enrolment: Enrolment }) {
             <button
               type="button"
               onClick={() => void enrol()}
-              disabled={busy}
+              disabled={busy || done}
               className={cn(
                 "group w-full rounded-2xl bg-white p-5 pr-12 text-left",
                 "shadow-sm transition-all duration-200 disabled:cursor-wait",
@@ -48,12 +54,17 @@ export function PasskeyEnrolCard({ enrolment }: { enrolment: Enrolment }) {
                   <span className="block text-sm font-medium text-ink">
                     {busy
                       ? "Confirme no seu dispositivo"
-                      : status === "error"
+                      : done
+                        ? "Dispositivo registrado"
+                        : status === "error"
                         ? "Tentar de novo"
                         : "Registrar este dispositivo"}
                   </span>
                   <span className="mt-0.5 block text-xs text-ink/50">
-                    {error || "Entre sem esperar código"}
+                    {error ||
+                      (status === "enrolled"
+                        ? "Este dispositivo foi registrado."
+                        : "Entre sem esperar código")}
                   </span>
                 </span>
               </span>

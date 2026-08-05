@@ -12,23 +12,24 @@ import { useProfile } from "./useProfile";
 
 export type EnrolmentStatus =
   | "checking"
-  | "offer" // no key yet — the card is asking
+  | "offer" // card is asking to register this device
   | "prompting" // the OS sheet is up
   | "enrolled"
+  | "already-registered"
   | "error"
   | "dismissed" // said no before, but can still enrol on demand
   | "hidden"; // unsupported, or not eligible to enrol at all
 
 /**
- * After signing in, checks whether the account already has a passkey and
- * offers to create one when it does not. Enrolment needs the gateway session
- * cookie, so a passkey-only session cannot enrol.
+ * After signing in with a code, offers to create a passkey for this device.
+ * Enrolment needs the gateway session cookie, so a passkey-only session cannot
+ * enrol.
  */
 export function usePasskeyEnrolment() {
   const session = useAtomValue(sessionAtom);
   const { data: profile, isFetched } = useProfile();
   const [dismissed, setDismissed] = useAtom(enrolDismissedAtom);
-  const { enrolPasskey, hasPasskey } = usePasskey();
+  const { enrolPasskey } = usePasskey();
 
   const [status, setStatus] = useState<EnrolmentStatus>("checking");
   const [error, setError] = useState("");
@@ -50,8 +51,8 @@ export function usePasskeyEnrolment() {
         return;
       }
       if (isAlreadyRegistered(caught)) {
-          setStatus("enrolled");
-        setError("");
+        setStatus("already-registered");
+        setError("Este dispositivo já foi registrado.");
         return;
       }
       setStatus("error");
@@ -76,15 +77,8 @@ export function usePasskeyEnrolment() {
 
     started.current = true;
 
-    void (async () => {
-      setStatus("checking");
-      if (await hasPasskey(email)) {
-        setStatus("enrolled");
-        return;
-      }
-      setStatus(dismissed.includes(email) ? "dismissed" : "offer");
-    })();
-  }, [session, isFetched, canEnrol, dismissed, email, hasPasskey]);
+    setStatus(dismissed.includes(email) ? "dismissed" : "offer");
+  }, [session, isFetched, canEnrol, dismissed, email]);
 
   return {
     status,
