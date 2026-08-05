@@ -46,7 +46,7 @@ export function usePasskeyEnrolment() {
       }
       if (isAlreadyRegistered(caught)) {
         setStatus("already-registered");
-        setError("Este dispositivo já foi registrado.");
+        setError(passkeyDebugMessage(caught));
         return;
       }
       setStatus("error");
