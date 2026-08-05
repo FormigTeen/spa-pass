@@ -75,6 +75,17 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!isValid || busy) return;
+
+    setError("");
+    setAuthenticating(true);
+    const available = await hasPasskey(email);
+    if (available) {
+      await gate.attempt(email);
+      setAuthenticating(false);
+      return;
+    }
+    setAuthenticating(false);
+
     await sendCode();
   };
 
@@ -93,7 +104,7 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
     const outcome = await gate.attempt(email);
     setAuthenticating(false);
 
-    if (outcome !== "signed-in") await sendCode();
+    if (outcome === "no-credentials") await sendCode();
   };
 
   return (

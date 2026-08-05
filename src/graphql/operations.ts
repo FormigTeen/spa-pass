@@ -83,8 +83,8 @@ export const PASSKEY_LOGIN_OPTIONS = gql`
 `;
 
 export const PASSKEY_LOGIN = gql`
-  mutation PasskeyLogin($email: String!, $key: JSON!) {
-    passkeyLogin(email: $email, key: $key) {
+  mutation PasskeyLogin($key: JSON!) {
+    passkeyLogin(key: $key) {
       email
       token
     }

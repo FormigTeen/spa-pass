@@ -92,7 +92,6 @@ export function usePasskey() {
       const key = await startAuthentication({ optionsJSON: optionsJSON as never });
 
       const data = await core<{ passkeyLogin: PasskeyToken }>(PASSKEY_LOGIN, {
-        email,
         key,
       });
       if (!data.passkeyLogin) throw new Error("Falha ao validar a chave de acesso.");
