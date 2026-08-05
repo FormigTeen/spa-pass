@@ -76,16 +76,6 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
     event.preventDefault();
     if (!isValid || busy) return;
 
-    setError("");
-    setAuthenticating(true);
-    const available = await hasPasskey(email);
-    if (available) {
-      await gate.attempt(email);
-      setAuthenticating(false);
-      return;
-    }
-    setAuthenticating(false);
-
     await sendCode();
   };
 
