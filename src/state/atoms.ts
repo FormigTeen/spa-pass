@@ -23,6 +23,9 @@ export const isAuthenticatedAtom = atom((get) => get(sessionAtom) !== null);
  */
 export const signedOutAtom = atom(false);
 
+/** Keeps React StrictMode/remounts from opening the passkey sheet repeatedly. */
+export const passkeyAutoPromptedAtom = atom(false);
+
 /* ── login machine ───────────────────────────────────────────── */
 
 export type LoginStep = "email" | "code";

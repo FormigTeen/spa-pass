@@ -11,7 +11,7 @@ import {
 } from "./usePasskey";
 import { completeVtexFirebaseSession } from "../lib/vtexFirebaseSession";
 import { fetchProfile, profileQueryKey } from "./useProfile";
-import { signedOutAtom } from "../state/atoms";
+import { sessionAtom, signedOutAtom } from "../state/atoms";
 
 export type PasskeyGateStatus = "idle" | "prompting" | "linking" | "failed";
 
@@ -32,6 +32,7 @@ export function useAutoPasskeyLogin(): PasskeyGate {
   const { loginWithPasskey, hasPasskey } = usePasskey();
   const queryClient = useQueryClient();
   const signedOut = useAtomValue(signedOutAtom);
+  const setSession = useSetAtom(sessionAtom);
   const setSignedOut = useSetAtom(signedOutAtom);
 
   const [status, setStatus] = useState<PasskeyGateStatus>("idle");
@@ -45,14 +46,23 @@ export function useAutoPasskeyLogin(): PasskeyGate {
       // Signing in again lifts the flag a previous sign out left behind. It
       // disables the profile query, so an invalidate would refetch nothing.
       setSignedOut(false);
-      await queryClient.fetchQuery({
-        queryKey: profileQueryKey,
-        queryFn: fetchProfile,
+      const profile = await queryClient
+        .fetchQuery({
+          queryKey: profileQueryKey,
+          queryFn: fetchProfile,
+        })
+        .catch(() => null);
+
+      setSession({
+        email: profile?.email || token.email,
+        document: profile?.document ?? null,
+        token: token.token,
+        via: "passkey",
       });
 
       setStatus("idle");
     },
-    [queryClient, setSignedOut],
+    [queryClient, setSession, setSignedOut],
   );
 
   const attempt = useCallback(
