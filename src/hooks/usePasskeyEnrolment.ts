@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAtom, useAtomValue } from "jotai";
 import {
   passkeyRegistrationUnsupportedAtom,
@@ -35,9 +35,8 @@ export function usePasskeyEnrolment() {
   );
   const { enrolPasskey, hasPasskey } = usePasskey();
 
-  const [status, setStatus] = useState<EnrolmentStatus>("checking");
+  const [status, setStatus] = useState<EnrolmentStatus>("hidden");
   const [error, setError] = useState("");
-  const started = useRef(false);
 
   const enrol = useCallback(async () => {
     setStatus("prompting");
@@ -68,18 +67,23 @@ export function usePasskeyEnrolment() {
   }, [enrolPasskey, setUnsupported]);
 
   useEffect(() => {
-    if (started.current || !session || unsupported) {
-      if (unsupported) setStatus("hidden");
+    let cancelled = false;
+
+    setError("");
+    setStatus("hidden");
+
+    if (!session || session.via !== "code" || unsupported) {
       return;
     }
 
     if (!supportsPasskey()) {
-      setStatus("hidden");
       return;
     }
 
-    started.current = true;
+    setStatus("checking");
+
     void supportsPlatformAuthenticator().then((available) => {
+      if (cancelled) return;
       if (!available) {
         setUnsupported(true);
         setStatus("hidden");
@@ -87,15 +91,20 @@ export function usePasskeyEnrolment() {
       }
 
       void hasPasskey(session.email).then((registered) => {
+        if (cancelled) return;
         setStatus(registered ? "already-registered" : "offer");
       });
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, [hasPasskey, session, setUnsupported, unsupported]);
 
   return {
     status,
     error,
     enrol,
-    canEnrol: Boolean(session),
+    canEnrol: status === "offer" || status === "error",
   };
 }

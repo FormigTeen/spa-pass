@@ -8,7 +8,6 @@ type Enrolment = ReturnType<typeof usePasskeyEnrolment>;
 export function PasskeyEnrolCard({ enrolment }: { enrolment: Enrolment }) {
   const { status, error, enrol } = enrolment;
   const visible =
-    status === "checking" ||
     status === "offer" ||
     status === "prompting" ||
     status === "enrolled" ||
