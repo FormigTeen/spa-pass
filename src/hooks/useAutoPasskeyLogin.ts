@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import {
   isNoCredentials,
   isUserCancellation,
@@ -24,11 +24,14 @@ export type PasskeyGate = {
   hasPasskey: (email: string) => Promise<boolean>;
   /** Authenticate with an explicit WebAuthn prompt. */
   attempt: (email: string) => Promise<AttemptOutcome>;
+  /** Authenticate with any discoverable passkey for this site. */
+  attemptAny: () => Promise<AttemptOutcome>;
 };
 
 export function useAutoPasskeyLogin(): PasskeyGate {
   const { loginWithPasskey, hasPasskey } = usePasskey();
   const queryClient = useQueryClient();
+  const signedOut = useAtomValue(signedOutAtom);
   const setSignedOut = useSetAtom(signedOutAtom);
 
   const [status, setStatus] = useState<PasskeyGateStatus>("idle");
@@ -76,6 +79,24 @@ export function useAutoPasskeyLogin(): PasskeyGate {
     [loginWithPasskey, finish],
   );
 
+  const attemptAny = useCallback(async (): Promise<AttemptOutcome> => {
+    if (!supportsPasskey() || signedOut) return "no-credentials";
+
+    setStatus("prompting");
+    setError("");
+    try {
+      const token = await loginWithPasskey();
+      await finish(token);
+      return "signed-in";
+    } catch (caught) {
+      setStatus("idle");
+      setError("");
+      return isUserCancellation(caught) || isNoCredentials(caught)
+        ? "no-credentials"
+        : "failed";
+    }
+  }, [loginWithPasskey, finish, signedOut]);
+
   const checkPasskey = useCallback(
     (email: string) => {
       if (!email || !supportsPasskey()) return Promise.resolve(false);
@@ -84,5 +105,5 @@ export function useAutoPasskeyLogin(): PasskeyGate {
     [hasPasskey],
   );
 
-  return { status, error, hasPasskey: checkPasskey, attempt };
+  return { status, error, hasPasskey: checkPasskey, attempt, attemptAny };
 }

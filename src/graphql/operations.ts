@@ -77,7 +77,7 @@ export const PASSKEY_REGISTER = gql`
 `;
 
 export const PASSKEY_LOGIN_OPTIONS = gql`
-  query PasskeyLoginOptions($email: String!) {
+  query PasskeyLoginOptions($email: String) {
     passkeyLoginOptions(email: $email)
   }
 `;

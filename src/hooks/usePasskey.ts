@@ -64,10 +64,10 @@ export const supportsPlatformAuthenticator = () =>
 
 export function usePasskey() {
   /** Throws `NoCredentialsError` when the address has no key registered. */
-  const loginOptions = useCallback(async (email: string) => {
+  const loginOptions = useCallback(async (email?: string) => {
     const data = await core<{ passkeyLoginOptions: AuthOptions }>(
       PASSKEY_LOGIN_OPTIONS,
-      { email },
+      email ? { email } : {},
     ).catch(() => {
       throw new NoCredentialsError();
     });
@@ -86,7 +86,7 @@ export function usePasskey() {
   );
 
   const loginWithPasskey = useCallback(
-    async (email: string): Promise<PasskeyToken> => {
+    async (email?: string): Promise<PasskeyToken> => {
       const optionsJSON = await loginOptions(email);
 
       const key = await startAuthentication({ optionsJSON: optionsJSON as never });
