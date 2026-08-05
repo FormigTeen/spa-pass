@@ -1,10 +1,8 @@
 import { AnimatePresence } from "framer-motion";
-import { useEffect } from "react";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtomValue } from "jotai";
 import {
   isAuthenticatedAtom,
   loginStepAtom,
-  passkeyAutoPromptedAtom,
   signedOutAtom,
 } from "../state/atoms";
 import { useAutoPasskeyLogin } from "../hooks/useAutoPasskeyLogin";
@@ -20,33 +18,6 @@ export function WhitePanel() {
   const signedOut = useAtomValue(signedOutAtom);
   const { data: profile, isFetched: profileFetched } = useProfile();
   const gate = useAutoPasskeyLogin();
-  const { attemptAny } = gate;
-  const [autoPrompted, setAutoPrompted] = useAtom(passkeyAutoPromptedAtom);
-
-  useEffect(() => {
-    if (
-      autoPrompted ||
-      authenticated ||
-      signedOut ||
-      !profileFetched ||
-      profile?.email ||
-      step !== "email"
-    ) {
-      return;
-    }
-
-    setAutoPrompted(true);
-    void attemptAny();
-  }, [
-    attemptAny,
-    authenticated,
-    autoPrompted,
-    profile?.email,
-    profileFetched,
-    setAutoPrompted,
-    signedOut,
-    step,
-  ]);
 
   const content = () => {
     if (authenticated) return <WelcomeScreen key="welcome" />;
