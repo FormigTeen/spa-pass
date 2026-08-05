@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useAtomValue } from "jotai";
-import { sessionAtom } from "../state/atoms";
+import { useAtom, useAtomValue } from "jotai";
+import {
+  passkeyRegistrationUnsupportedAtom,
+  sessionAtom,
+} from "../state/atoms";
 import {
   isAlreadyRegistered,
   isUserCancellation,
   passkeyDebugMessage,
   passkeyErrorMessage,
+  supportsPlatformAuthenticator,
   supportsPasskey,
   usePasskey,
 } from "./usePasskey";
@@ -26,6 +30,9 @@ export type EnrolmentStatus =
  */
 export function usePasskeyEnrolment() {
   const session = useAtomValue(sessionAtom);
+  const [unsupported, setUnsupported] = useAtom(
+    passkeyRegistrationUnsupportedAtom,
+  );
   const { enrolPasskey } = usePasskey();
 
   const [status, setStatus] = useState<EnrolmentStatus>("checking");
@@ -39,6 +46,12 @@ export function usePasskeyEnrolment() {
       await enrolPasskey();
       setStatus("enrolled");
     } catch (caught) {
+      if (caught instanceof Error && caught.name === "NotReadableError") {
+        setUnsupported(true);
+        setStatus("hidden");
+        setError("");
+        return;
+      }
       if (isUserCancellation(caught)) {
         setStatus("offer");
         setError(passkeyDebugMessage(caught));
@@ -52,10 +65,13 @@ export function usePasskeyEnrolment() {
       setStatus("error");
       setError(passkeyErrorMessage(caught));
     }
-  }, [enrolPasskey]);
+  }, [enrolPasskey, setUnsupported]);
 
   useEffect(() => {
-    if (started.current || !session) return;
+    if (started.current || !session || unsupported) {
+      if (unsupported) setStatus("hidden");
+      return;
+    }
 
     if (!supportsPasskey()) {
       setStatus("hidden");
@@ -63,8 +79,11 @@ export function usePasskeyEnrolment() {
     }
 
     started.current = true;
-    setStatus("offer");
-  }, [session]);
+    void supportsPlatformAuthenticator().then((available) => {
+      setStatus(available ? "offer" : "hidden");
+      if (!available) setUnsupported(true);
+    });
+  }, [session, setUnsupported, unsupported]);
 
   return {
     status,

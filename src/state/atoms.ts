@@ -26,6 +26,9 @@ export const signedOutAtom = atom(false);
 /** Keeps React StrictMode/remounts from opening the passkey sheet repeatedly. */
 export const passkeyAutoPromptedAtom = atom(false);
 
+/** Device/browser failed local passkey creation during this tab session. */
+export const passkeyRegistrationUnsupportedAtom = atom(false);
+
 /* ── login machine ───────────────────────────────────────────── */
 
 export type LoginStep = "email" | "code";
