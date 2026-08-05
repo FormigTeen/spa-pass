@@ -12,7 +12,6 @@ export function PasskeyEnrolCard({ enrolment }: { enrolment: Enrolment }) {
     status === "offer" ||
     status === "prompting" ||
     status === "enrolled" ||
-    status === "already-registered" ||
     status === "error";
   const busy = status === "prompting";
   const done = status === "enrolled" || status === "already-registered";

@@ -33,7 +33,7 @@ export function usePasskeyEnrolment() {
   const [unsupported, setUnsupported] = useAtom(
     passkeyRegistrationUnsupportedAtom,
   );
-  const { enrolPasskey } = usePasskey();
+  const { enrolPasskey, hasPasskey } = usePasskey();
 
   const [status, setStatus] = useState<EnrolmentStatus>("checking");
   const [error, setError] = useState("");
@@ -59,7 +59,7 @@ export function usePasskeyEnrolment() {
       }
       if (isAlreadyRegistered(caught)) {
         setStatus("already-registered");
-        setError(passkeyDebugMessage(caught));
+        setError("");
         return;
       }
       setStatus("error");
@@ -80,10 +80,17 @@ export function usePasskeyEnrolment() {
 
     started.current = true;
     void supportsPlatformAuthenticator().then((available) => {
-      setStatus(available ? "offer" : "hidden");
-      if (!available) setUnsupported(true);
+      if (!available) {
+        setUnsupported(true);
+        setStatus("hidden");
+        return;
+      }
+
+      void hasPasskey(session.email).then((registered) => {
+        setStatus(registered ? "already-registered" : "offer");
+      });
     });
-  }, [session, setUnsupported, unsupported]);
+  }, [hasPasskey, session, setUnsupported, unsupported]);
 
   return {
     status,
