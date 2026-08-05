@@ -49,6 +49,14 @@ export const passkeyErrorMessage = (error: unknown) => {
   return gatewayErrorMessage(error, "Não foi possível usar a chave de acesso.");
 };
 
+export const passkeyDebugMessage = (error: unknown) => {
+  const message = passkeyErrorMessage(error);
+  if (!(error instanceof Error)) return message;
+
+  const details = [error.name, error.message].filter(Boolean).join(": ");
+  return details ? `${message} (${details})` : message;
+};
+
 export const supportsPasskey = () => browserSupportsWebAuthn();
 
 export const supportsPlatformAuthenticator = () =>

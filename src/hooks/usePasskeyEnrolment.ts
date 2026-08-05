@@ -4,6 +4,7 @@ import { enrolDismissedAtom, sessionAtom } from "../state/atoms";
 import {
   isAlreadyRegistered,
   isUserCancellation,
+  passkeyDebugMessage,
   passkeyErrorMessage,
   supportsPasskey,
   usePasskey,
@@ -47,7 +48,7 @@ export function usePasskeyEnrolment() {
     } catch (caught) {
       if (isUserCancellation(caught)) {
         setStatus("offer");
-        setError("");
+        setError(passkeyDebugMessage(caught));
         return;
       }
       if (isAlreadyRegistered(caught)) {
