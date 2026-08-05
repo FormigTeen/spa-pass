@@ -33,7 +33,7 @@ export function usePasskeyEnrolment() {
   const [unsupported, setUnsupported] = useAtom(
     passkeyRegistrationUnsupportedAtom,
   );
-  const { enrolPasskey, hasPasskey } = usePasskey();
+  const { enrolPasskey } = usePasskey();
 
   const [status, setStatus] = useState<EnrolmentStatus>("hidden");
   const [error, setError] = useState("");
@@ -90,16 +90,13 @@ export function usePasskeyEnrolment() {
         return;
       }
 
-      void hasPasskey(session.email).then((registered) => {
-        if (cancelled) return;
-        setStatus(registered ? "already-registered" : "offer");
-      });
+      setStatus("offer");
     });
 
     return () => {
       cancelled = true;
     };
-  }, [hasPasskey, session, setUnsupported, unsupported]);
+  }, [session, setUnsupported, unsupported]);
 
   return {
     status,
