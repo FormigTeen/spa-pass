@@ -1,13 +1,14 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronRight, KeyRound, Loader2, X } from "lucide-react";
+import { ChevronRight, KeyRound, Loader2 } from "lucide-react";
 import type { usePasskeyEnrolment } from "../hooks/usePasskeyEnrolment";
 import { cn } from "../lib/cn";
 
 type Enrolment = ReturnType<typeof usePasskeyEnrolment>;
 
 export function PasskeyEnrolCard({ enrolment }: { enrolment: Enrolment }) {
-  const { status, error, enrol, dismiss } = enrolment;
+  const { status, error, enrol } = enrolment;
   const visible =
+    status === "checking" ||
     status === "offer" ||
     status === "prompting" ||
     status === "enrolled" ||
@@ -27,8 +28,6 @@ export function PasskeyEnrolCard({ enrolment }: { enrolment: Enrolment }) {
           aria-live="polite"
           className="w-full overflow-hidden"
         >
-          {/* Dismiss sits alongside the card, not inside it: a button cannot
-              nest within another button. */}
           <div className="relative">
             <button
               type="button"
@@ -75,15 +74,6 @@ export function PasskeyEnrolCard({ enrolment }: { enrolment: Enrolment }) {
                 className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-ink/25 transition-all group-enabled:group-hover:translate-x-0.5 group-enabled:group-hover:text-ink/60"
                 aria-hidden
               />
-            </button>
-
-            <button
-              type="button"
-              onClick={dismiss}
-              aria-label="Agora não"
-              className="absolute right-2 top-2 z-10 grid h-7 w-7 place-items-center rounded-full text-ink/40 transition-colors hover:bg-ink/10 hover:text-ink"
-            >
-              <X className="h-4 w-4" aria-hidden />
             </button>
           </div>
         </motion.section>

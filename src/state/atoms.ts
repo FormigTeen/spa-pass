@@ -32,9 +32,6 @@ export const loginStepAtom = atom<LoginStep>("email");
 /** Email currently being typed / verified. */
 export const draftEmailAtom = atom("");
 
-/** Emails that declined the enrolment offer, for this tab only. */
-export const enrolDismissedAtom = atom<string[]>([]);
-
 /* ── chat ────────────────────────────────────────────────────── */
 
 export type ChatRole = "user" | "agent";
