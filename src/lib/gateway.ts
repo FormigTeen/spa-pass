@@ -1,19 +1,19 @@
 import { ClientError, GraphQLClient } from "graphql-request";
 
 /**
- * In dev the calls go through the Vite proxy, which makes them same-origin so
- * the gateway's `SameSite=Lax` session cookie is actually sent back. In a build
- * the app is served from `pass.cvlb.tech`, already same-site with the gateway.
+ * Always the real CEV gateway. Dev is served from `local.pass.cvlb.tech`,
+ * which is same-site with `api-cev-gateway.cvlb.tech` (both under `cvlb.tech`),
+ * so the gateway's `SameSite=Lax` session cookie is sent on these calls even
+ * though they are cross-origin.
  */
-/**
- * Always the real gateway. Dev is served from `local.pass.cvlb.tech`, which is
- * same-site with `api-gateway.cvlb.tech` (both under `cvlb.tech`), so the
- * gateway's `SameSite=Lax` session cookie is sent on these calls even though
- * they are cross-origin.
- */
-const GATEWAY = "https://api-gateway.cvlb.tech/gql/v1";
+export const GATEWAY_ORIGIN = "https://api-cev-gateway.cvlb.tech";
+export const GATEWAY_BASE_URL = import.meta.env.DEV
+  ? window.location.origin
+  : GATEWAY_ORIGIN;
 
-const API_KEY = "TOOYB1KQ6-FAUW-IH4W-LIEF1T4AE6E";
+export const API_KEY = "019F004F-3F4B-7CD7-87A1-55D84B55873F";
+
+const GATEWAY = `${GATEWAY_BASE_URL}/gql/v1`;
 
 const client = (module: "core" | "ecom") =>
   new GraphQLClient(`${GATEWAY}/${module}`, {

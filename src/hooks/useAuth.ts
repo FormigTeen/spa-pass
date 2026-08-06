@@ -12,6 +12,7 @@ import {
   draftEmailAtom,
   loginStepAtom,
   mobileChatOpenAtom,
+  selectedOrderIdAtom,
   sessionAtom,
   signedOutAtom,
   type Session,
@@ -96,6 +97,7 @@ export function useSignOut() {
   const setDraftEmail = useSetAtom(draftEmailAtom);
   const setMessages = useSetAtom(chatMessagesAtom);
   const setMobileChatOpen = useSetAtom(mobileChatOpenAtom);
+  const setSelectedOrderId = useSetAtom(selectedOrderIdAtom);
 
   return useCallback(() => {
     // Only the gateway can end the session: its cookie is httpOnly and
@@ -114,6 +116,7 @@ export function useSignOut() {
     setDraftEmail(signedInAs);
     setMessages([]);
     setMobileChatOpen(false);
+    setSelectedOrderId("");
     queryClient.clear();
   }, [
     queryClient,
@@ -124,5 +127,6 @@ export function useSignOut() {
     setDraftEmail,
     setMessages,
     setMobileChatOpen,
+    setSelectedOrderId,
   ]);
 }

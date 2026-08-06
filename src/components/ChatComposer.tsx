@@ -7,12 +7,17 @@ type ChatComposerProps = {
   onSend: (message: string) => void;
   disabled?: boolean;
   autoFocus?: boolean;
+  /** Changes to request focus; the value itself carries no meaning. */
+  focusSignal?: number;
+  placeholder?: string;
 };
 
 export function ChatComposer({
   onSend,
   disabled = false,
   autoFocus = false,
+  focusSignal = 0,
+  placeholder = "Digite sua mensagem...",
 }: ChatComposerProps) {
   const [message, setMessage] = useState("");
   const [focused, setFocused] = useState(false);
@@ -23,6 +28,13 @@ export function ChatComposer({
     const timer = setTimeout(() => input.current?.focus(), 300);
     return () => clearTimeout(timer);
   }, [autoFocus]);
+
+  // The initial value is just state, not a request to focus.
+  useEffect(() => {
+    if (!focusSignal || disabled) return;
+    const timer = setTimeout(() => input.current?.focus(), 300);
+    return () => clearTimeout(timer);
+  }, [focusSignal, disabled]);
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -56,7 +68,7 @@ export function ChatComposer({
           onChange={(event) => setMessage(event.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          placeholder="Digite sua mensagem..."
+          placeholder={placeholder}
           aria-label="Mensagem para o agente"
           className="flex-1 bg-transparent text-cream placeholder:text-cream/40 outline-none text-base"
         />

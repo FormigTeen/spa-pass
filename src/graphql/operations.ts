@@ -56,6 +56,26 @@ export const GET_PROFILE = gql`
   }
 `;
 
+export const ORDERING_ORDERS = gql`
+  query OrderingOrders($limit: String) {
+    orderingOrders(limit: $limit) {
+      vtex {
+        orderId
+        status
+        creationDate
+        value
+        items {
+          name
+          quantity
+        }
+      }
+      state {
+        status
+      }
+    }
+  }
+`;
+
 /**
  * Passkey operations, renamed in gq_example's passkey module:
  *   registerPasskeyOptions → passkeyRegisterOptions
@@ -87,6 +107,47 @@ export const PASSKEY_LOGIN = gql`
     passkeyLogin(key: $key) {
       email
       token
+    }
+  }
+`;
+
+/* ── inbot module (gq_example) ───────────────────────────────── */
+
+/**
+ * Opens the agent session for an order. The session carries the request the
+ * client uses to talk to the agent — url, method, headers and a JSON Schema of
+ * the body — so nothing about that call is hardcoded here.
+ */
+export const INBOT_REQUEST_REFUND_ORDER = gql`
+  mutation InbotRequestRefundOrder($orderId: String!) {
+    inbotRequestRefundOrder(orderId: $orderId) {
+      uuid
+      request {
+        url
+        method
+        headers
+        bodySchema
+        stream
+      }
+    }
+  }
+`;
+
+export const INBOT_RESTORE_SESSION = gql`
+  query InbotRestoreSession($session: UUID!) {
+    inbotRestoreSession(session: $session) {
+      uuid
+      agent
+      state
+      events
+      updatedAt
+      request {
+        url
+        method
+        headers
+        bodySchema
+        stream
+      }
     }
   }
 `;

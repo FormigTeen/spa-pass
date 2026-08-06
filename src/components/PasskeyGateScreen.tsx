@@ -42,7 +42,7 @@ export function PasskeyGateScreen({ gate }: { gate: PasskeyGate }) {
           "Estamos abrindo sua sessão."
         ) : (
           <>
-            Use o desbloqueio deste dispositivo para entrar.
+            Use sua chave de segurança para entrar.
           </>
         )}
       </p>

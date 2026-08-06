@@ -4,6 +4,7 @@ import { askAgent } from "../agent/agent";
 import {
   chatBusyAtom,
   chatMessagesAtom,
+  selectedOrderIdAtom,
   sessionAtom,
   type ChatMessage,
 } from "../state/atoms";
@@ -15,6 +16,7 @@ export function useChat() {
   const [messages, setMessages] = useAtom(chatMessagesAtom);
   const [busy, setBusy] = useAtom(chatBusyAtom);
   const session = useAtomValue(sessionAtom);
+  const orderId = useAtomValue(selectedOrderIdAtom).trim();
 
   const send = useCallback(
     async (text: string) => {
@@ -38,7 +40,19 @@ export function useChat() {
       setBusy(true);
 
       try {
-        const reply = await askAgent({ message: content, history, session });
+        const reply = await askAgent({
+          message: content,
+          history,
+          session,
+          orderId,
+          // The agent streams, so the placeholder fills in as the text arrives.
+          onText: (text) =>
+            setMessages((current) =>
+              current.map((item) =>
+                item.id === placeholder.id ? { ...item, content: text } : item,
+              ),
+            ),
+        });
         setMessages((current) =>
           current.map((item) =>
             item.id === placeholder.id
@@ -62,8 +76,8 @@ export function useChat() {
         setBusy(false);
       }
     },
-    [messages, busy, session, setMessages, setBusy],
+    [messages, busy, session, orderId, setMessages, setBusy],
   );
 
-  return { messages, busy, send };
+  return { messages, busy, send, orderId };
 }

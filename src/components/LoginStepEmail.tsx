@@ -183,8 +183,8 @@ export function LoginStepEmail({ gate }: { gate: PasskeyGate }) {
             <KeyRound className="w-4 h-4" aria-hidden />
           )}
           {authenticating
-            ? "Verificando chave..."
-            : "Usar chave deste dispositivo"}
+            ? "Verificando chave de segurança..."
+            : "Entrar com chave de segurança"}
         </motion.button>
       </form>
 

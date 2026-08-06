@@ -50,17 +50,17 @@ export function PasskeyEnrolCard({ enrolment }: { enrolment: Enrolment }) {
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm font-medium text-ink">
                     {busy
-                      ? "Confirme no seu dispositivo"
+                      ? "Confirme sua chave de segurança"
                       : done
-                        ? "Dispositivo registrado"
+                        ? "Chave de segurança registrada"
                         : status === "error"
                         ? "Tentar de novo"
-                        : "Registrar este dispositivo"}
+                        : "Registrar chave de segurança"}
                   </span>
                   <span className="mt-0.5 block text-xs text-ink/50">
                     {error ||
                       (status === "enrolled"
-                        ? "Este dispositivo foi registrado."
+                        ? "Sua chave de segurança foi registrada."
                         : "Entre sem esperar código")}
                   </span>
                 </span>

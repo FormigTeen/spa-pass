@@ -4,6 +4,7 @@ import {
   isAuthenticatedAtom,
   loginStepAtom,
   signedOutAtom,
+  viewAtom,
 } from "../state/atoms";
 import { useAutoPasskeyLogin } from "../hooks/useAutoPasskeyLogin";
 import { useProfile } from "../hooks/useProfile";
@@ -11,16 +12,23 @@ import { LoginStepEmail } from "./LoginStepEmail";
 import { LoginStepCode } from "./LoginStepCode";
 import { PasskeyGateScreen } from "./PasskeyGateScreen";
 import { WelcomeScreen } from "./WelcomeScreen";
+import { OrdersScreen } from "./OrdersScreen";
 
 export function WhitePanel() {
   const authenticated = useAtomValue(isAuthenticatedAtom);
   const step = useAtomValue(loginStepAtom);
   const signedOut = useAtomValue(signedOutAtom);
+  const view = useAtomValue(viewAtom);
   const { data: profile, isFetched: profileFetched } = useProfile();
   const gate = useAutoPasskeyLogin();
 
   const content = () => {
-    if (authenticated) return <WelcomeScreen key="welcome" />;
+    if (authenticated)
+      return view === "refund" ? (
+        <OrdersScreen key="orders" />
+      ) : (
+        <WelcomeScreen key="welcome" />
+      );
     if (!signedOut && (!profileFetched || profile?.email))
       return <div key="bootstrap" />;
     // Only once the passkey is through. While the OS sheet is up the sheet is

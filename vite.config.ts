@@ -17,6 +17,7 @@ import basicSsl from '@vitejs/plugin-basic-ssl'
  * session cookie is `Secure` and WebAuthn needs a secure context off localhost.
  */
 const DEV_HOST = 'local.pass.cvlb.tech'
+const CEV_GATEWAY = 'https://api-cev-gateway.cvlb.tech'
 
 // https://vite.dev/config/
 export default defineConfig(({ command }) => {
@@ -37,6 +38,18 @@ export default defineConfig(({ command }) => {
         // Tooling writes into these while the app is running, and each write
         // would otherwise force a full page reload.
         ignored: ['**/.playwright-mcp/**', '**/.claude/**', '**/dist/**'],
+      },
+      proxy: {
+        '/gql/v1': {
+          target: CEV_GATEWAY,
+          changeOrigin: true,
+          secure: true,
+        },
+        '/inbot/v1': {
+          target: CEV_GATEWAY,
+          changeOrigin: true,
+          secure: true,
+        },
       },
     },
   }
