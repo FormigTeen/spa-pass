@@ -34,6 +34,12 @@ jobs:
       - name: Verify custom domain survived the build
         run: test -f dist/CNAME && cat dist/CNAME
 
+      # Pages runs Jekyll unless this file is there, and Jekyll drops every path
+      # starting with an underscore — which is how Module Federation names its
+      # shared chunks (`_virtual_mf-*`). Without it the app 404s on boot.
+      - name: Verify Jekyll stays out of the way
+        run: test -f dist/.nojekyll
+
       - name: Publish to gh-pages
         working-directory: dist
         env:
