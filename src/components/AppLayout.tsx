@@ -1,12 +1,13 @@
 import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAtom, useAtomValue } from "jotai";
-import { isAuthenticatedAtom, mobileChatOpenAtom } from "../state/atoms";
+import { isAuthenticatedAtom, mobileChatOpenAtom, viewAtom } from "../state/atoms";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { useViewportHeight } from "../hooks/useViewportHeight";
 import { useSessionBootstrap } from "../hooks/useAuth";
 import { WhitePanel } from "./WhitePanel";
 import { RedPanel } from "./RedPanel";
+import { EChatLauncher } from "./EChatLauncher";
 import { FloatingChatButton, MobilePanelToggle } from "./FloatingChatButton";
 
 export function AppLayout() {
@@ -14,8 +15,13 @@ export function AppLayout() {
   useViewportHeight();
 
   const authenticated = useAtomValue(isAuthenticatedAtom);
+  const view = useAtomValue(viewAtom);
   const [chatOpen, setChatOpen] = useAtom(mobileChatOpenAtom);
   const isMobile = useIsMobile();
+
+  // The welcome screen has no chat of its own: the red side is bare, and the
+  // conversation there is the E-Chat widget behind the floating button.
+  const onWelcome = authenticated && view === "start";
 
   // Escape closes the chat, the same as the back control.
   useEffect(() => {
@@ -35,8 +41,10 @@ export function AppLayout() {
           <WhitePanel />
         </div>
         <div className="w-[40%] h-full">
-          <RedPanel />
+          {onWelcome ? <div className="h-full w-full bg-brand" /> : <RedPanel />}
         </div>
+
+        {onWelcome && <EChatLauncher />}
       </div>
     );
   }
@@ -49,7 +57,7 @@ export function AppLayout() {
       </div>
 
       <AnimatePresence>
-        {chatOpen && (
+        {chatOpen && !onWelcome && (
           <motion.div
             initial={{ opacity: 0, y: "100%" }}
             animate={{ opacity: 1, y: 0 }}
@@ -64,12 +72,16 @@ export function AppLayout() {
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {!chatOpen && authenticated && (
-          <FloatingChatButton onClick={() => setChatOpen(true)} />
-        )}
-        {chatOpen && <MobilePanelToggle onClick={() => setChatOpen(false)} />}
-      </AnimatePresence>
+      {onWelcome ? (
+        <EChatLauncher />
+      ) : (
+        <AnimatePresence>
+          {!chatOpen && authenticated && (
+            <FloatingChatButton onClick={() => setChatOpen(true)} />
+          )}
+          {chatOpen && <MobilePanelToggle onClick={() => setChatOpen(false)} />}
+        </AnimatePresence>
+      )}
     </div>
   );
 }

@@ -1,14 +1,12 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useAtomValue } from "jotai";
-import { History, Lock, Moon, Sparkles } from "lucide-react";
+import { History, Lock, Sparkles } from "lucide-react";
 import {
   chatRestoringAtom,
   composerFocusAtom,
   isAuthenticatedAtom,
-  viewAtom,
 } from "../state/atoms";
 import { useChat } from "../hooks/useChat";
-import { IDLE_GREETING, useIdleChat } from "../hooks/useIdleChat";
 import { ChatComposer } from "./ChatComposer";
 import { ChatTranscript } from "./ChatTranscript";
 
@@ -29,18 +27,12 @@ export function RedPanel({
   autoFocusComposer = false,
 }: RedPanelProps) {
   const authenticated = useAtomValue(isAuthenticatedAtom);
-  const view = useAtomValue(viewAtom);
   const focusSignal = useAtomValue(composerFocusAtom);
   const restoring = useAtomValue(chatRestoringAtom);
-  const agent = useChat();
-  const idle = useIdleChat();
+  const chat = useChat();
 
-  const onOrders = view === "refund";
-  const unlocked = Boolean(agent.orderId);
+  const unlocked = Boolean(chat.orderId);
 
-  // The home screen talks to the off-duty agent; the orders screen to the real
-  // one, and only once a pedido is picked.
-  const chat = onOrders ? agent : idle;
   const hasTranscript = authenticated && chat.messages.length > 0;
 
   return (
@@ -63,13 +55,11 @@ export function RedPanel({
               key={
                 !authenticated
                   ? "greeting"
-                  : !onOrders
-                    ? "idle"
-                    : restoring
-                      ? "restoring"
-                      : unlocked
-                        ? "unlocked"
-                        : "locked"
+                  : restoring
+                    ? "restoring"
+                    : unlocked
+                      ? "unlocked"
+                      : "locked"
               }
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -78,10 +68,9 @@ export function RedPanel({
             >
               <Idle
                 authenticated={authenticated}
-                onOrders={onOrders}
                 unlocked={unlocked}
                 restoring={restoring}
-                orderId={agent.orderId}
+                orderId={chat.orderId}
               />
             </motion.div>
           </AnimatePresence>
@@ -92,15 +81,13 @@ export function RedPanel({
         <div className="pt-4 pb-[calc(2rem+env(safe-area-inset-bottom))]">
           <ChatComposer
             onSend={(message) => void chat.send(message)}
-            disabled={chat.busy || (onOrders && !unlocked)}
+            disabled={chat.busy || !unlocked}
             autoFocus={autoFocusComposer}
             focusSignal={focusSignal}
             placeholder={
-              !onOrders
-                ? "Diga oi para o agente de folga"
-                : unlocked
-                  ? "Descreva o que você quer resolver"
-                  : "Escolha um pedido primeiro"
+              unlocked
+                ? "Descreva o que você quer resolver"
+                : "Escolha um pedido primeiro"
             }
           />
         </div>
@@ -111,13 +98,11 @@ export function RedPanel({
 
 function Idle({
   authenticated,
-  onOrders,
   unlocked,
   restoring,
   orderId,
 }: {
   authenticated: boolean;
-  onOrders: boolean;
   unlocked: boolean;
   restoring: boolean;
   orderId: string;
@@ -128,17 +113,6 @@ function Idle({
         <Sparkles className="w-6 h-6 text-cream/50 mb-5" aria-hidden />
         <p className="text-cream/95 text-lg md:text-xl leading-relaxed font-light">
           {GREETING}
-        </p>
-      </>
-    );
-  }
-
-  if (!onOrders) {
-    return (
-      <>
-        <Moon className="w-6 h-6 text-cream/50 mb-5" aria-hidden />
-        <p className="text-cream/95 text-lg md:text-xl leading-relaxed font-light">
-          {IDLE_GREETING}
         </p>
       </>
     );

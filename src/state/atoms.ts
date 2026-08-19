@@ -61,14 +61,6 @@ export const chatMessagesAtom = atom<ChatMessage[]>([]);
 
 export const chatBusyAtom = atom(false);
 
-/**
- * The home screen's chat. Kept apart from `chatMessagesAtom` so the idle
- * small talk never lands in the transcript of a real order.
- */
-export const idleChatMessagesAtom = atom<ChatMessage[]>([]);
-
-export const idleChatBusyAtom = atom(false);
-
 export const mobileChatOpenAtom = atom(false);
 
 /** True while an order's transcript is being fetched back from the session. */

@@ -28,8 +28,8 @@
     "install": "^0.13.0",
     "jotai": "^2.20.2",
     "lucide-react": "^1.28.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
     "react-use": "^17.6.0",
     "rect-use": "^1.0.0",
     "tailwind-merge": "^3.6.0",
@@ -37,6 +37,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
+    "@module-federation/vite": "^1.20.7",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-basic-ssl": "^2.3.0",
