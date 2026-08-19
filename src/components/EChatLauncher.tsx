@@ -2,6 +2,7 @@ import { Component, lazy, Suspense, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Bot, RefreshCw, X } from "lucide-react";
+import { cn } from "../lib/cn";
 import { GATEWAY_ORIGIN } from "../lib/gateway";
 import { useSignOut } from "../hooks/useAuth";
 
@@ -87,7 +88,14 @@ export function EChatLauncher() {
 
 function Fab({ open, onClick }: { open: boolean; onClick: () => void }) {
   return (
-    <div className="group/fab fixed right-6 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-50 flex items-center gap-3">
+    <div
+      // On a phone the panel covers the screen, so the button would land on top
+      // of the conversation; there, the header's close control stands in for it.
+      className={cn(
+        "group/fab fixed right-6 bottom-[calc(1.5rem+env(safe-area-inset-bottom))] z-50 items-center gap-3 md:flex",
+        open ? "hidden" : "flex",
+      )}
+    >
       {/* Sibling of the button rather than a child, so the label can grow
           leftwards without the round button reflowing around it. */}
       <span
