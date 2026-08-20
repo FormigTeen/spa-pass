@@ -1,9 +1,8 @@
-import { Component, lazy, Suspense, useEffect, useState } from "react";
-import type { ReactNode } from "react";
+import { Component, lazy, Suspense, useEffect, useRef, useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bot, RefreshCw, X } from "lucide-react";
+import { Bot, MessageSquarePlus, RefreshCw, X } from "lucide-react";
 import { cn } from "../lib/cn";
-import { ECHAT_SCOPE, loadEChatStyles } from "../lib/echatStyles";
 import { GATEWAY_ORIGIN } from "../lib/gateway";
 import { useSignOut } from "../hooks/useAuth";
 
@@ -13,11 +12,26 @@ import { useSignOut } from "../hooks/useAuth";
  */
 const InChatWidget = lazy(() => import("inchat/InChatWidget"));
 
+type EChatHandle = import("inchat/InChatWidget").InChatWidgetHandle;
+
 const LABEL = "Teste o E-Chat";
+
+/**
+ * The widget's own styling tokens (see its README.mfe.md). Its `md:` breakpoints
+ * read the viewport, not this panel, so in a 400px column it would arrive at the
+ * sizes it uses on a full screen: oversized type, and product cards as tall as
+ * their photo is wide.
+ */
+const ECHAT_THEME = {
+  "--inchat-scale": 0.85,
+  "--inchat-photo-aspect": 1.6,
+} as CSSProperties;
 
 export function EChatLauncher() {
   const [open, setOpen] = useState(false);
-  const styled = useEChatStyles(open);
+  // The widget draws no controls of its own: clearing the thread is this
+  // header's job, through the handle it hands back.
+  const chat = useRef<EChatHandle>(null);
   const signOut = useSignOut();
 
   // Escape closes the panel, the same as the header control.
@@ -61,6 +75,15 @@ export function EChatLauncher() {
               </span>
               <button
                 type="button"
+                onClick={() => void chat.current?.clear()}
+                aria-label="Limpar a conversa"
+                title="Limpar a conversa"
+                className="grid h-9 w-9 place-items-center rounded-full text-cream/60 transition-colors hover:bg-cream/10 hover:text-cream"
+              >
+                <MessageSquarePlus className="h-5 w-5" aria-hidden />
+              </button>
+              <button
+                type="button"
                 onClick={() => setOpen(false)}
                 aria-label="Fechar o E-Chat"
                 className="grid h-9 w-9 place-items-center rounded-full text-cream/60 transition-colors hover:bg-cream/10 hover:text-cream"
@@ -70,23 +93,16 @@ export function EChatLauncher() {
             </header>
 
             <div
-              className={cn(
-                "min-h-0 flex-1 bg-ink pb-[env(safe-area-inset-bottom)]",
-                ECHAT_SCOPE,
-              )}
+              className="min-h-0 flex-1 bg-ink pb-[env(safe-area-inset-bottom)]"
+              style={ECHAT_THEME}
             >
               <RemoteBoundary>
                 <Suspense fallback={<Loading />}>
-                  {/* Held back until the remote's own stylesheet is adopted:
-                      mounting first shows a frame of unstyled conversation. */}
-                  {styled ? (
-                    <InChatWidget
-                      gatewayOrigin={GATEWAY_ORIGIN}
-                      onStartLogin={signOut}
-                    />
-                  ) : (
-                    <Loading />
-                  )}
+                  <InChatWidget
+                    ref={chat}
+                    gatewayOrigin={GATEWAY_ORIGIN}
+                    onStartLogin={signOut}
+                  />
                 </Suspense>
               </RemoteBoundary>
             </div>
@@ -97,30 +113,6 @@ export function EChatLauncher() {
       <Fab open={open} onClick={() => setOpen((it) => !it)} />
     </>
   );
-}
-
-/**
- * True once the widget's styles are in the page. A failure still resolves: a
- * plain conversation is worth more than none, and the remote may well load.
- */
-function useEChatStyles(open: boolean) {
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    if (!open || ready) return;
-
-    let cancelled = false;
-    void loadEChatStyles()
-      .catch(() => undefined)
-      .then(() => {
-        if (!cancelled) setReady(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [open, ready]);
-
-  return ready;
 }
 
 function Fab({ open, onClick }: { open: boolean; onClick: () => void }) {
